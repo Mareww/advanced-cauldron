@@ -1,0 +1,33 @@
+{
+    "block.advancedcauldron.potion_cauldron": "Potion Cauldron",
+    "block.advancedcauldron.dyed_water_cauldron": "Dyed Water Cauldron",
+    "block.advancedcauldron.brewing_cauldron": "Brewing Cauldron",
+
+    "config.advancedcauldron.title": "Advanced Cauldron Config",
+    "config.advancedcauldron.category.brewing": "Brewing",
+    "config.advancedcauldron.category.heat": "Heat Damage",
+    "config.advancedcauldron.category.particles": "Particles",
+
+    "config.advancedcauldron.brewTimeTicks": "Brew Time (ticks)",
+    "config.advancedcauldron.brewTimeTicks.tooltip": "How many ticks a brew takes to complete. Default: 400 (20 seconds).",
+    "config.advancedcauldron.itemPickupDelayTicks": "Item Pickup Delay (ticks)",
+    "config.advancedcauldron.itemPickupDelayTicks.tooltip": "Minimum item age in ticks before cauldron picks it up. Default: 10.",
+    "config.advancedcauldron.arrowsPerCauldronLevel": "Arrows per Cauldron Level",
+    "config.advancedcauldron.arrowsPerCauldronLevel.tooltip": "Number of arrows that can be tipped per cauldron level. Default: 16.",
+
+    "config.advancedcauldron.heatDamageEnabled": "Heat Damage Enabled",
+    "config.advancedcauldron.heatDamageEnabled.tooltip": "Whether entities take damage in heated cauldrons.",
+    "config.advancedcauldron.heatDamageAmount": "Heat Damage Amount",
+    "config.advancedcauldron.heatDamageAmount.tooltip": "Damage per hit from heated cauldrons. 1.0 = half a heart.",
+    "config.advancedcauldron.heatDamageDelayTicks": "Heat Damage Delay (ticks)",
+    "config.advancedcauldron.heatDamageDelayTicks.tooltip": "Ticks before heat damage starts. Default: 40 (2 seconds).",
+    "config.advancedcauldron.heatDamageIntervalTicks": "Heat Damage Interval (ticks)",
+    "config.advancedcauldron.heatDamageIntervalTicks.tooltip": "Ticks between each heat damage tick. Default: 20 (1 second).",
+
+    "config.advancedcauldron.steamParticlesEnabled": "Steam Particles",
+    "config.advancedcauldron.steamParticlesEnabled.tooltip": "Show steam particles above heated cauldrons.",
+    "config.advancedcauldron.brewingBubbleParticlesEnabled": "Brewing Bubble Particles",
+    "config.advancedcauldron.brewingBubbleParticlesEnabled.tooltip": "Show colored bubble particles during brewing.",
+    "config.advancedcauldron.suppressCampfireSmoke": "Suppress Campfire Smoke",
+    "config.advancedcauldron.suppressCampfireSmoke.tooltip": "Hide campfire smoke when a cauldron is placed above it."
+}

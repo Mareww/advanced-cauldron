@@ -1,0 +1,11 @@
+{
+    "required": true,
+    "minVersion": "0.8",
+    "package": "com.marew.advancedcauldron.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "mixins": ["WaterCauldronBrewingMixin", "WaterCauldronItemCollisionMixin"],
+    "client": ["client.CauldronBubblesMixin", "client.CampfireSmokeMixin"],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}
