@@ -303,7 +303,7 @@ public class ModCauldronBehaviors {
 
     public static ActionResult tryTipArrow(BlockState state, World world, BlockPos pos,
                                             PlayerEntity player, Hand hand, ItemStack stack) {
-        if (!(state.getBlock() instanceof PotionCauldronBlock)) return ActionResult.PASS;
+        if (!(state.getBlock() instanceof PotionCauldronBlock) && !(state.getBlock() instanceof BrewingCauldronBlock)) return ActionResult.PASS;
 
         Item item = stack.getItem();
 
@@ -312,64 +312,86 @@ public class ModCauldronBehaviors {
         if (!isTippable) return ActionResult.PASS;
 
         if (!world.isClient) {
+            // Get the potion from either block type
             BlockEntity be = world.getBlockEntity(pos);
+            Potion storedPotion = null;
+            int currentLevel;
+            int tipsRemaining;
+
             if (be instanceof PotionCauldronBlockEntity potionBE) {
-                Potion storedPotion = potionBE.getPotion();
-                if (storedPotion == null) return ActionResult.PASS;
+                storedPotion = potionBE.getPotion();
+                currentLevel = state.get(PotionCauldronBlock.LEVEL);
+                tipsRemaining = potionBE.getTipsRemaining();
+            } else if (be instanceof BrewingCauldronBlockEntity brewBE) {
+                if (brewBE.isBrewing()) return ActionResult.PASS;
+                storedPotion = brewBE.getCurrentPotion();
+                currentLevel = state.get(BrewingCauldronBlock.LEVEL);
+                tipsRemaining = ModConfig.get().arrowsPerCauldronLevel; // brewing cauldron doesn't track tips
+            } else {
+                return ActionResult.PASS;
+            }
 
-                // Tip up to remaining capacity in current level, capped by stack size
-                int currentLevel = state.get(PotionCauldronBlock.LEVEL);
-                int arrowsPerLevel = ModConfig.get().arrowsPerCauldronLevel;
-                int totalAvailable = ((currentLevel - 1) * arrowsPerLevel) + potionBE.getTipsRemaining();
-                int toTip = Math.min(Math.min(stack.getCount(), arrowsPerLevel), totalAvailable);
+            if (storedPotion == null || storedPotion == Potions.WATER) return ActionResult.PASS;
 
-                if (toTip <= 0) return ActionResult.PASS;
+            // Tip up to remaining capacity in current level, capped by stack size
+            int arrowsPerLevel = ModConfig.get().arrowsPerCauldronLevel;
+            int totalAvailable = ((currentLevel - 1) * arrowsPerLevel) + tipsRemaining;
+            int toTip = Math.min(Math.min(stack.getCount(), arrowsPerLevel), totalAvailable);
 
-                // Determine the tipped arrow item
-                Item tippedItem = Items.TIPPED_ARROW;
-                NbtCompound customNbt = new NbtCompound();
-                customNbt.putBoolean("CauldronTipped", true);
+            if (toTip <= 0) return ActionResult.PASS;
 
-                if (item != Items.ARROW) {
-                    Identifier arrowId = Registries.ITEM.getId(item);
-                    customNbt.putString("OriginalArrow", arrowId.toString());
+            // Determine the tipped arrow item
+            Item tippedItem = Items.TIPPED_ARROW;
+            NbtCompound customNbt = new NbtCompound();
+            customNbt.putBoolean("CauldronTipped", true);
 
-                    String namespace = arrowId.getNamespace();
-                    String path = arrowId.getPath();
-                    Identifier tippedVariantId = new Identifier(namespace, "tipped_" + path);
-                    Item tippedVariant = Registries.ITEM.get(tippedVariantId);
+            if (item != Items.ARROW) {
+                Identifier arrowId = Registries.ITEM.getId(item);
+                customNbt.putString("OriginalArrow", arrowId.toString());
 
-                    if (tippedVariant != Items.AIR && tippedVariant != Items.TIPPED_ARROW) {
-                        tippedItem = tippedVariant;
-                    }
+                String namespace = arrowId.getNamespace();
+                String path = arrowId.getPath();
+                Identifier tippedVariantId = new Identifier(namespace, "tipped_" + path);
+                Item tippedVariant = Registries.ITEM.get(tippedVariantId);
+
+                if (tippedVariant != Items.AIR && tippedVariant != Items.TIPPED_ARROW) {
+                    tippedItem = tippedVariant;
                 }
+            }
 
-                // Create the tipped arrows with the exact same potion
-                ItemStack tippedArrows = new ItemStack(tippedItem, toTip);
-                PotionUtil.setPotion(tippedArrows, storedPotion);
-                NbtCompound nbt = tippedArrows.getOrCreateNbt();
-                nbt.put("CauldronData", customNbt);
+            // Create the tipped arrows with the exact same potion
+            ItemStack tippedArrows = new ItemStack(tippedItem, toTip);
+            PotionUtil.setPotion(tippedArrows, storedPotion);
+            NbtCompound nbt = tippedArrows.getOrCreateNbt();
+            nbt.put("CauldronData", customNbt);
 
-                // Consume arrows
-                if (!player.getAbilities().creativeMode) {
-                    stack.decrement(toTip);
-                }
+            // Consume arrows
+            if (!player.getAbilities().creativeMode) {
+                stack.decrement(toTip);
+            }
 
-                // Give the tipped arrows
-                if (!player.getInventory().insertStack(tippedArrows)) {
-                    player.dropItem(tippedArrows, false);
-                }
+            // Give the tipped arrows
+            if (!player.getInventory().insertStack(tippedArrows)) {
+                player.dropItem(tippedArrows, false);
+            }
 
-                // Consume tips and drain levels proportionally
+            // Consume tips and drain levels
+            if (be instanceof PotionCauldronBlockEntity potionBE) {
                 int levelsDrained = potionBE.consumeTips(toTip);
                 if (levelsDrained > 0) {
                     PotionCauldronBlock.decrementLevels(state, world, pos, levelsDrained);
                 }
-
-                player.incrementStat(Stats.USE_CAULDRON);
-                world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
-                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            } else {
+                // Brewing cauldron: drain one level per arrowsPerLevel tipped
+                int levelsDrained = (toTip + arrowsPerLevel - 1) / arrowsPerLevel;
+                if (levelsDrained > 0) {
+                    BrewingCauldronBlock.decrementLevel(state, world, pos);
+                }
             }
+
+            player.incrementStat(Stats.USE_CAULDRON);
+            world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+            world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
         }
         return ActionResult.success(world.isClient);
     }

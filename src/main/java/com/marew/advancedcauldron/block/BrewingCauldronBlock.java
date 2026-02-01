@@ -3,6 +3,7 @@ package com.marew.advancedcauldron.block;
 import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
 import com.marew.advancedcauldron.config.ModConfig;
 import com.marew.advancedcauldron.registry.ModBlocks;
+import com.marew.advancedcauldron.registry.ModCauldronBehaviors;
 import com.marew.advancedcauldron.util.HeatDamageUtil;
 import net.minecraft.block.*;
 import net.minecraft.block.cauldron.CauldronBehavior;
@@ -94,6 +95,12 @@ public class BrewingCauldronBlock extends AbstractCauldronBlock implements Block
             if (result != ActionResult.PASS) {
                 return result;
             }
+        }
+
+        // Try arrow tipping (only works when not brewing)
+        ActionResult tipResult = ModCauldronBehaviors.tryTipArrow(state, world, pos, player, hand, stack);
+        if (tipResult != ActionResult.PASS) {
+            return tipResult;
         }
 
         if (!world.isClient) {
