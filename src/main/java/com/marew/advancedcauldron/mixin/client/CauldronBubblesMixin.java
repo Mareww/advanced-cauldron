@@ -7,6 +7,7 @@ import com.marew.advancedcauldron.util.HeatSourceUtil;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.particle.EntityEffectParticleEffect;
 import net.minecraft.particle.ParticleTypes;
@@ -27,6 +28,7 @@ public abstract class CauldronBubblesMixin extends Block {
         super.randomDisplayTick(state, world, pos, random);
 
         if (!HeatSourceUtil.hasHeatSource(world, pos)) return;
+        if (state.isOf(Blocks.CAULDRON)) return;
 
         // Steam particles - always active on any hot cauldron (even empty), subtle wisp
         if (ModConfig.get().steamParticlesEnabled && random.nextInt(3) == 0) {
