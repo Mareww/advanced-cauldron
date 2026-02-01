@@ -10,10 +10,10 @@ import com.marew.advancedcauldron.util.HeatSourceUtil;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LeveledCauldronBlock;
-import net.minecraft.component.type.PotionContentsComponent;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.potion.Potion;
 import net.minecraft.potion.Potions;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
@@ -32,7 +32,6 @@ public class WaterCauldronItemCollisionMixin {
 
         if (world.isClient) return;
 
-        // Heat damage for any entity in a hot leveled cauldron (water, powder snow)
         HeatDamageUtil.tick(entity, world, pos);
 
         if (!(entity instanceof ItemEntity itemEntity)) return;
@@ -41,8 +40,7 @@ public class WaterCauldronItemCollisionMixin {
         if (!HeatSourceUtil.hasHeatSource(world, pos)) return;
 
         ItemStack stack = itemEntity.getStack();
-        PotionContentsComponent waterPotion = new PotionContentsComponent(Potions.WATER);
-        PotionContentsComponent result = CauldronBrewingHelper.getBrewResult(world, waterPotion, stack);
+        Potion result = CauldronBrewingHelper.getBrewResult(world, Potions.WATER, stack);
         if (result == null) return;
 
         int level = state.get(Properties.LEVEL_3);

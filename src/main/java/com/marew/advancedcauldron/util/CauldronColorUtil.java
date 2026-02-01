@@ -6,7 +6,8 @@ import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.type.PotionContentsComponent;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionUtil;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
@@ -23,8 +24,8 @@ public class CauldronColorUtil {
         BlockEntity be = world.getBlockEntity(pos);
 
         if (be instanceof PotionCauldronBlockEntity potionBE) {
-            PotionContentsComponent contents = potionBE.getPotionContents();
-            if (contents != null) return contents.getColor();
+            Potion potion = potionBE.getPotion();
+            if (potion != null) return PotionUtil.getColor(potion.getEffects());
             return DEFAULT_WATER_COLOR;
         }
 

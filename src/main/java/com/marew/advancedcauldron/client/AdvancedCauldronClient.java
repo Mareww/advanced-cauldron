@@ -7,7 +7,8 @@ import com.marew.advancedcauldron.registry.ModBlocks;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.type.PotionContentsComponent;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionUtil;
 
 public class AdvancedCauldronClient implements ClientModInitializer {
     @Override
@@ -17,12 +18,12 @@ public class AdvancedCauldronClient implements ClientModInitializer {
             if (tintIndex != 0 || world == null || pos == null) return -1;
             BlockEntity be = world.getBlockEntity(pos);
             if (be instanceof PotionCauldronBlockEntity potionBE) {
-                PotionContentsComponent contents = potionBE.getPotionContents();
-                if (contents != null) {
-                    return contents.getColor();
+                Potion potion = potionBE.getPotion();
+                if (potion != null) {
+                    return PotionUtil.getColor(potion.getEffects());
                 }
             }
-            return 0x3F76E4; // Default water color
+            return 0x3F76E4;
         }, ModBlocks.POTION_CAULDRON);
 
         // Color the dyed water cauldron based on stored dye color

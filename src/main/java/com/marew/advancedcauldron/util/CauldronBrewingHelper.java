@@ -1,9 +1,9 @@
 package com.marew.advancedcauldron.util;
 
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.PotionContentsComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionUtil;
 import net.minecraft.recipe.BrewingRecipeRegistry;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
@@ -11,26 +11,23 @@ import org.jetbrains.annotations.Nullable;
 public class CauldronBrewingHelper {
 
     @Nullable
-    public static PotionContentsComponent getBrewResult(World world, PotionContentsComponent currentPotion, ItemStack ingredient) {
+    public static Potion getBrewResult(World world, Potion currentPotion, ItemStack ingredient) {
         if (ingredient.isEmpty()) return null;
 
-        BrewingRecipeRegistry registry = world.getBrewingRecipeRegistry();
-
         ItemStack inputBottle = new ItemStack(Items.POTION);
-        inputBottle.set(DataComponentTypes.POTION_CONTENTS, currentPotion);
+        PotionUtil.setPotion(inputBottle, currentPotion);
 
-        if (!registry.hasRecipe(inputBottle, ingredient)) {
+        if (!BrewingRecipeRegistry.hasRecipe(inputBottle, ingredient)) {
             return null;
         }
 
-        ItemStack result = registry.craft(ingredient, inputBottle);
+        ItemStack result = BrewingRecipeRegistry.craft(ingredient, inputBottle);
         if (result.isEmpty()) return null;
 
-        return result.get(DataComponentTypes.POTION_CONTENTS);
+        return PotionUtil.getPotion(result);
     }
 
     public static boolean isBrewingIngredient(World world, ItemStack stack) {
-        BrewingRecipeRegistry registry = world.getBrewingRecipeRegistry();
-        return registry.isValidIngredient(stack);
+        return BrewingRecipeRegistry.isValidIngredient(stack);
     }
 }

@@ -9,40 +9,40 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.type.PotionContentsComponent;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
-import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.Registries;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 public class BrewingCauldronBlockEntity extends BlockEntity {
 
-    private PotionContentsComponent currentPotion;
+    private Potion currentPotion;
     private int brewingProgress = 0;
     private boolean isBrewing = false;
     private ItemStack pendingIngredient = ItemStack.EMPTY;
 
     public BrewingCauldronBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.BREWING_CAULDRON_BLOCK_ENTITY, pos, state);
-        this.currentPotion = new PotionContentsComponent(Potions.WATER);
+        this.currentPotion = Potions.WATER;
     }
 
     public int getDisplayColor() {
         if (currentPotion != null) {
-            return currentPotion.getColor();
+            return PotionUtil.getColor(currentPotion.getEffects());
         }
         return 0x3F76E4;
     }
@@ -55,7 +55,7 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         return brewingProgress;
     }
 
-    public PotionContentsComponent getCurrentPotion() {
+    public Potion getCurrentPotion() {
         return currentPotion;
     }
 
@@ -65,10 +65,12 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         if (!HeatSourceUtil.hasHeatSource(world, pos)) return;
 
         ItemStack stack = itemEntity.getStack();
-        PotionContentsComponent result = CauldronBrewingHelper.getBrewResult(world, currentPotion, stack);
+        Potion result = CauldronBrewingHelper.getBrewResult(world, currentPotion, stack);
 
         if (result != null) {
-            pendingIngredient = stack.copyWithCount(1);
+            ItemStack copy = stack.copy();
+            copy.setCount(1);
+            pendingIngredient = copy;
             stack.decrement(1);
             if (stack.isEmpty()) {
                 itemEntity.discard();
@@ -83,10 +85,12 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         if (!HeatSourceUtil.hasHeatSource(world, pos)) return false;
 
         ItemStack stack = player.getStackInHand(hand);
-        PotionContentsComponent result = CauldronBrewingHelper.getBrewResult(world, currentPotion, stack);
+        Potion result = CauldronBrewingHelper.getBrewResult(world, currentPotion, stack);
 
         if (result != null) {
-            pendingIngredient = stack.copyWithCount(1);
+            ItemStack copy = stack.copy();
+            copy.setCount(1);
+            pendingIngredient = copy;
             if (!player.getAbilities().creativeMode) {
                 stack.decrement(1);
             }
@@ -120,7 +124,7 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
     }
 
     private void completeBrewing(World world, BlockPos pos, BlockState state) {
-        PotionContentsComponent result = CauldronBrewingHelper.getBrewResult(world, currentPotion, pendingIngredient);
+        Potion result = CauldronBrewingHelper.getBrewResult(world, currentPotion, pendingIngredient);
 
         if (result != null) {
             this.currentPotion = result;
@@ -142,20 +146,18 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
-        super.readNbt(nbt, registryLookup);
-        if (nbt.contains("CurrentPotion")) {
-            NbtElement potionNbt = nbt.get("CurrentPotion");
-            this.currentPotion = PotionContentsComponent.CODEC
-                    .parse(registryLookup.getOps(NbtOps.INSTANCE), potionNbt)
-                    .result()
-                    .orElse(new PotionContentsComponent(Potions.WATER));
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+        if (nbt.contains("CurrentPotionId")) {
+            String potionId = nbt.getString("CurrentPotionId");
+            this.currentPotion = Registries.POTION.get(new Identifier(potionId));
+        } else {
+            this.currentPotion = Potions.WATER;
         }
         this.brewingProgress = nbt.getInt("BrewingProgress");
         this.isBrewing = nbt.getBoolean("IsBrewing");
         if (nbt.contains("PendingIngredient")) {
-            this.pendingIngredient = ItemStack.fromNbt(registryLookup, nbt.get("PendingIngredient"))
-                    .orElse(ItemStack.EMPTY);
+            this.pendingIngredient = ItemStack.fromNbt(nbt.getCompound("PendingIngredient"));
         }
 
         if (this.world != null && this.world.isClient) {
@@ -164,21 +166,18 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
-        super.writeNbt(nbt, registryLookup);
+    protected void writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
         if (this.currentPotion != null) {
-            PotionContentsComponent.CODEC
-                    .encodeStart(registryLookup.getOps(NbtOps.INSTANCE), this.currentPotion)
-                    .result()
-                    .ifPresent(encoded -> nbt.put("CurrentPotion", encoded));
+            Identifier id = Registries.POTION.getId(this.currentPotion);
+            nbt.putString("CurrentPotionId", id.toString());
         }
         nbt.putInt("BrewingProgress", this.brewingProgress);
         nbt.putBoolean("IsBrewing", this.isBrewing);
         if (!this.pendingIngredient.isEmpty()) {
-            ItemStack.CODEC
-                    .encodeStart(registryLookup.getOps(NbtOps.INSTANCE), this.pendingIngredient)
-                    .result()
-                    .ifPresent(encoded -> nbt.put("PendingIngredient", encoded));
+            NbtCompound ingredientNbt = new NbtCompound();
+            this.pendingIngredient.writeNbt(ingredientNbt);
+            nbt.put("PendingIngredient", ingredientNbt);
         }
     }
 
@@ -189,7 +188,7 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
     }
 
     @Override
-    public NbtCompound toInitialChunkDataNbt(RegistryWrapper.WrapperLookup registryLookup) {
-        return createNbt(registryLookup);
+    public NbtCompound toInitialChunkDataNbt() {
+        return createNbt();
     }
 }

@@ -3,7 +3,6 @@ package com.marew.advancedcauldron.block;
 import com.marew.advancedcauldron.block.entity.DyedWaterCauldronBlockEntity;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.util.HeatDamageUtil;
-import com.mojang.serialization.MapCodec;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -13,28 +12,25 @@ import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
-import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
+
 public class DyedWaterCauldronBlock extends AbstractCauldronBlock implements BlockEntityProvider {
-    public static final MapCodec<DyedWaterCauldronBlock> CODEC = createCodec(settings -> new DyedWaterCauldronBlock(settings, ModBlocks.DYED_WATER_CAULDRON_BEHAVIOR));
     public static final IntProperty LEVEL = Properties.LEVEL_3;
 
-    @Override
-    public MapCodec<? extends DyedWaterCauldronBlock> getCodec() {
-        return CODEC;
-    }
-
-    public DyedWaterCauldronBlock(Settings settings, CauldronBehavior.CauldronBehaviorMap behaviorMap) {
+    public DyedWaterCauldronBlock(Settings settings, Map<Item, CauldronBehavior> behaviorMap) {
         super(settings, behaviorMap);
         this.setDefaultState(this.stateManager.getDefaultState().with(LEVEL, 1));
     }
@@ -75,7 +71,7 @@ public class DyedWaterCauldronBlock extends AbstractCauldronBlock implements Blo
     }
 
     @Override
-    protected void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
+    public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
         if (!world.isClient) {
             HeatDamageUtil.tick(entity, world, pos);
         }
@@ -83,15 +79,15 @@ public class DyedWaterCauldronBlock extends AbstractCauldronBlock implements Blo
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
-        // Dyed water doesn't interact with rain
     }
 
     @Override
-    protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        CauldronBehavior behavior = this.behaviorMap.map().get(stack.getItem());
+    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        ItemStack stack = player.getStackInHand(hand);
+        CauldronBehavior behavior = this.behaviorMap.get(stack.getItem());
         if (behavior != null) {
             return behavior.interact(state, world, pos, player, hand, stack);
         }
-        return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return ActionResult.PASS;
     }
 }

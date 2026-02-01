@@ -6,25 +6,21 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.type.PotionContentsComponent;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
 import net.minecraft.potion.Potion;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.potion.PotionUtil;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Optional;
 
 public class PotionCauldronBlockEntity extends BlockEntity {
 
     @Nullable
-    private PotionContentsComponent potionContents = null;
+    private Potion potion = null;
     private int tipsUsed = 0;
 
     public PotionCauldronBlockEntity(BlockPos pos, BlockState state) {
@@ -32,31 +28,15 @@ public class PotionCauldronBlockEntity extends BlockEntity {
     }
 
     @Nullable
-    public PotionContentsComponent getPotionContents() {
-        return potionContents;
+    public Potion getPotion() {
+        return potion;
     }
 
-    @Nullable
-    public RegistryEntry<Potion> getPotion() {
-        if (potionContents != null) {
-            return potionContents.potion().orElse(null);
-        }
-        return null;
-    }
-
-    public void setPotionContents(@Nullable PotionContentsComponent contents) {
-        this.potionContents = contents;
+    public void setPotion(@Nullable Potion potion) {
+        this.potion = potion;
         this.tipsUsed = 0;
         markDirty();
         scheduleSync();
-    }
-
-    public void setPotion(@Nullable RegistryEntry<Potion> potion) {
-        if (potion != null) {
-            setPotionContents(new PotionContentsComponent(potion));
-        } else {
-            setPotionContents(null);
-        }
     }
 
     private void scheduleSync() {
@@ -78,16 +58,13 @@ public class PotionCauldronBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
-        super.readNbt(nbt, registryLookup);
-        if (nbt.contains("PotionContents")) {
-            NbtElement potionNbt = nbt.get("PotionContents");
-            this.potionContents = PotionContentsComponent.CODEC
-                    .parse(registryLookup.getOps(NbtOps.INSTANCE), potionNbt)
-                    .result()
-                    .orElse(null);
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
+        if (nbt.contains("PotionId")) {
+            String potionId = nbt.getString("PotionId");
+            this.potion = Registries.POTION.get(new Identifier(potionId));
         } else {
-            this.potionContents = null;
+            this.potion = null;
         }
         this.tipsUsed = nbt.getInt("TipsUsed");
 
@@ -97,13 +74,11 @@ public class PotionCauldronBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
-        super.writeNbt(nbt, registryLookup);
-        if (this.potionContents != null) {
-            PotionContentsComponent.CODEC
-                    .encodeStart(registryLookup.getOps(NbtOps.INSTANCE), this.potionContents)
-                    .result()
-                    .ifPresent(encoded -> nbt.put("PotionContents", encoded));
+    protected void writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
+        if (this.potion != null) {
+            Identifier id = Registries.POTION.getId(this.potion);
+            nbt.putString("PotionId", id.toString());
         }
         nbt.putInt("TipsUsed", this.tipsUsed);
     }
@@ -115,7 +90,7 @@ public class PotionCauldronBlockEntity extends BlockEntity {
     }
 
     @Override
-    public NbtCompound toInitialChunkDataNbt(RegistryWrapper.WrapperLookup registryLookup) {
-        return createNbt(registryLookup);
+    public NbtCompound toInitialChunkDataNbt() {
+        return createNbt();
     }
 }

@@ -14,17 +14,13 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.LeveledCauldronBlock;
 import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.component.type.DyedColorComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.*;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -33,18 +29,16 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
 
 import java.util.Map;
-import java.util.Optional;
 
 public class ModCauldronBehaviors {
     public static final TagKey<Item> TIPPABLE_ARROWS = TagKey.of(
             Registries.ITEM.getKey(),
-            Identifier.of(AdvancedCauldron.MOD_ID, "tippable_arrows")
+            new Identifier(AdvancedCauldron.MOD_ID, "tippable_arrows")
     );
 
     public static void register() {
@@ -58,9 +52,8 @@ public class ModCauldronBehaviors {
     // ==================== WATER CAULDRON BEHAVIORS ====================
 
     private static void registerWaterCauldronBehaviors() {
-        Map<Item, CauldronBehavior> waterMap = CauldronBehavior.WATER_CAULDRON_BEHAVIOR.map();
+        Map<Item, CauldronBehavior> waterMap = CauldronBehavior.WATER_CAULDRON_BEHAVIOR;
 
-        // Dye items into water cauldron -> creates dyed water cauldron
         for (DyeColor color : DyeColor.values()) {
             Item dyeItem = getDyeItem(color);
             if (dyeItem == null) continue;
@@ -75,7 +68,7 @@ public class ModCauldronBehaviors {
 
                     BlockEntity be = world.getBlockEntity(pos);
                     if (be instanceof DyedWaterCauldronBlockEntity dyedBE) {
-                        dyedBE.setColor(color.getEntityColor());
+                        dyedBE.setColor(color.getSignColor());
                     }
 
                     if (!player.getAbilities().creativeMode) {
@@ -86,7 +79,7 @@ public class ModCauldronBehaviors {
                     world.playSound(null, pos, SoundEvents.ITEM_DYE_USE, SoundCategory.BLOCKS, 1.0F, 1.0F);
                     world.emitGameEvent(null, GameEvent.BLOCK_CHANGE, pos);
                 }
-                return ItemActionResult.success(world.isClient);
+                return ActionResult.success(world.isClient);
             });
         }
     }
@@ -94,18 +87,13 @@ public class ModCauldronBehaviors {
     // ==================== EMPTY CAULDRON BEHAVIORS ====================
 
     private static void registerEmptyCauldronBehaviors() {
-        Map<Item, CauldronBehavior> emptyMap = CauldronBehavior.EMPTY_CAULDRON_BEHAVIOR.map();
+        Map<Item, CauldronBehavior> emptyMap = CauldronBehavior.EMPTY_CAULDRON_BEHAVIOR;
 
         emptyMap.put(Items.POTION, (state, world, pos, player, hand, stack) -> {
-            PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
-            if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-            Optional<RegistryEntry<Potion>> potionOpt = contents.potion();
-            if (potionOpt.isEmpty() || potionOpt.get() == Potions.WATER) {
-                return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            Potion potion = PotionUtil.getPotion(stack);
+            if (potion == Potions.EMPTY || potion == Potions.WATER) {
+                return ActionResult.PASS;
             }
-
-            RegistryEntry<Potion> potion = potionOpt.get();
 
             if (!world.isClient) {
                 BlockState potionState = ModBlocks.POTION_CAULDRON.getDefaultState()
@@ -114,7 +102,7 @@ public class ModCauldronBehaviors {
 
                 BlockEntity be = world.getBlockEntity(pos);
                 if (be instanceof PotionCauldronBlockEntity potionBE) {
-                    potionBE.setPotionContents(contents);
+                    potionBE.setPotion(potion);
                 }
 
                 if (!player.getAbilities().creativeMode) {
@@ -131,24 +119,24 @@ public class ModCauldronBehaviors {
                 world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
                 world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
             }
-            return ItemActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient);
         });
     }
 
     // ==================== POTION CAULDRON BEHAVIORS ====================
 
     private static void registerPotionCauldronBehaviors() {
-        Map<Item, CauldronBehavior> potionMap = ModBlocks.POTION_CAULDRON_BEHAVIOR.map();
+        Map<Item, CauldronBehavior> potionMap = ModBlocks.POTION_CAULDRON_BEHAVIOR;
 
         // Glass bottle -> extract potion from cauldron
         potionMap.put(Items.GLASS_BOTTLE, (state, world, pos, player, hand, stack) -> {
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
                 if (be instanceof PotionCauldronBlockEntity potionBE) {
-                    PotionContentsComponent storedContents = potionBE.getPotionContents();
-                    if (storedContents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+                    Potion storedPotion = potionBE.getPotion();
+                    if (storedPotion == null) return ActionResult.PASS;
                     ItemStack potionStack = new ItemStack(Items.POTION);
-                    potionStack.set(DataComponentTypes.POTION_CONTENTS, storedContents);
+                    PotionUtil.setPotion(potionStack, storedPotion);
 
                     if (!player.getAbilities().creativeMode) {
                         stack.decrement(1);
@@ -165,29 +153,24 @@ public class ModCauldronBehaviors {
                     world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
                 }
             }
-            return ItemActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient);
         });
 
         // Potion bottle -> add more of the SAME potion to the cauldron
         potionMap.put(Items.POTION, (state, world, pos, player, hand, stack) -> {
             int level = state.get(PotionCauldronBlock.LEVEL);
-            if (level >= 3) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            if (level >= 3) return ActionResult.PASS;
 
-            PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
-            if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-            Optional<RegistryEntry<Potion>> incomingOpt = contents.potion();
-            if (incomingOpt.isEmpty() || incomingOpt.get() == Potions.WATER) {
-                return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            Potion incomingPotion = PotionUtil.getPotion(stack);
+            if (incomingPotion == Potions.EMPTY || incomingPotion == Potions.WATER) {
+                return ActionResult.PASS;
             }
-
-            RegistryEntry<Potion> incomingPotion = incomingOpt.get();
 
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
                 if (be instanceof PotionCauldronBlockEntity potionBE) {
                     if (potionBE.getPotion() != incomingPotion) {
-                        return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+                        return ActionResult.PASS;
                     }
 
                     world.setBlockState(pos, state.with(PotionCauldronBlock.LEVEL, level + 1));
@@ -207,7 +190,7 @@ public class ModCauldronBehaviors {
                     world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
                 }
             }
-            return ItemActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient);
         });
 
         // Bucket empties the potion cauldron
@@ -217,11 +200,11 @@ public class ModCauldronBehaviors {
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
                 world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
             }
-            return ItemActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient);
         });
 
         // Block leather armor from interacting with potion cauldrons
-        CauldronBehavior noOp = (state, world, pos, player, hand, stack) -> ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        CauldronBehavior noOp = (state, world, pos, player, hand, stack) -> ActionResult.PASS;
         potionMap.put(Items.LEATHER_HELMET, noOp);
         potionMap.put(Items.LEATHER_CHESTPLATE, noOp);
         potionMap.put(Items.LEATHER_LEGGINGS, noOp);
@@ -232,13 +215,13 @@ public class ModCauldronBehaviors {
     // ==================== DYED WATER CAULDRON BEHAVIORS ====================
 
     private static void registerDyedWaterCauldronBehaviors() {
-        Map<Item, CauldronBehavior> dyedMap = ModBlocks.DYED_WATER_CAULDRON_BEHAVIOR.map();
+        Map<Item, CauldronBehavior> dyedMap = ModBlocks.DYED_WATER_CAULDRON_BEHAVIOR;
 
         // Glass bottle -> extract dyed water (gives water bottle)
         dyedMap.put(Items.GLASS_BOTTLE, (state, world, pos, player, hand, stack) -> {
             if (!world.isClient) {
                 ItemStack waterBottle = new ItemStack(Items.POTION);
-                waterBottle.set(DataComponentTypes.POTION_CONTENTS, new PotionContentsComponent(Potions.WATER));
+                PotionUtil.setPotion(waterBottle, Potions.WATER);
 
                 if (!player.getAbilities().creativeMode) {
                     stack.decrement(1);
@@ -254,7 +237,7 @@ public class ModCauldronBehaviors {
                 world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
                 world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
             }
-            return ItemActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient);
         });
 
         // Additional dyes -> mix color
@@ -276,7 +259,7 @@ public class ModCauldronBehaviors {
                         world.emitGameEvent(null, GameEvent.BLOCK_CHANGE, pos);
                     }
                 }
-                return ItemActionResult.success(world.isClient);
+                return ActionResult.success(world.isClient);
             });
         }
 
@@ -287,7 +270,7 @@ public class ModCauldronBehaviors {
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
                 world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
             }
-            return ItemActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient);
         });
 
         // Dyeable items (leather armor) -> dye them in the cauldron
@@ -303,34 +286,36 @@ public class ModCauldronBehaviors {
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
                 if (be instanceof DyedWaterCauldronBlockEntity dyedBE) {
-                    stack.set(DataComponentTypes.DYED_COLOR, new DyedColorComponent(dyedBE.getColor(), true));
+                    if (stack.getItem() instanceof DyeableItem dyeableItem) {
+                        dyeableItem.setColor(stack, dyedBE.getColor());
+                    }
                     player.incrementStat(Stats.USE_CAULDRON);
                     DyedWaterCauldronBlock.decrementLevel(state, world, pos);
                     world.playSound(null, pos, SoundEvents.ITEM_DYE_USE, SoundCategory.BLOCKS, 1.0F, 1.0F);
                     world.emitGameEvent(null, GameEvent.BLOCK_CHANGE, pos);
                 }
             }
-            return ItemActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient);
         });
     }
 
     // ==================== ARROW TIPPING LOGIC ====================
 
-    public static ItemActionResult tryTipArrow(BlockState state, World world, BlockPos pos,
+    public static ActionResult tryTipArrow(BlockState state, World world, BlockPos pos,
                                             PlayerEntity player, Hand hand, ItemStack stack) {
-        if (!(state.getBlock() instanceof PotionCauldronBlock)) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (!(state.getBlock() instanceof PotionCauldronBlock)) return ActionResult.PASS;
 
         Item item = stack.getItem();
 
         boolean isTippable = stack.isIn(TIPPABLE_ARROWS) || item instanceof ArrowItem;
 
-        if (!isTippable) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (!isTippable) return ActionResult.PASS;
 
         if (!world.isClient) {
             BlockEntity be = world.getBlockEntity(pos);
             if (be instanceof PotionCauldronBlockEntity potionBE) {
-                PotionContentsComponent storedContents = potionBE.getPotionContents();
-                if (storedContents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+                Potion storedPotion = potionBE.getPotion();
+                if (storedPotion == null) return ActionResult.PASS;
 
                 // Tip up to remaining capacity in current level, capped by stack size
                 int currentLevel = state.get(PotionCauldronBlock.LEVEL);
@@ -338,7 +323,7 @@ public class ModCauldronBehaviors {
                 int totalAvailable = ((currentLevel - 1) * arrowsPerLevel) + potionBE.getTipsRemaining();
                 int toTip = Math.min(Math.min(stack.getCount(), arrowsPerLevel), totalAvailable);
 
-                if (toTip <= 0) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+                if (toTip <= 0) return ActionResult.PASS;
 
                 // Determine the tipped arrow item
                 Item tippedItem = Items.TIPPED_ARROW;
@@ -351,7 +336,7 @@ public class ModCauldronBehaviors {
 
                     String namespace = arrowId.getNamespace();
                     String path = arrowId.getPath();
-                    Identifier tippedVariantId = Identifier.of(namespace, "tipped_" + path);
+                    Identifier tippedVariantId = new Identifier(namespace, "tipped_" + path);
                     Item tippedVariant = Registries.ITEM.get(tippedVariantId);
 
                     if (tippedVariant != Items.AIR && tippedVariant != Items.TIPPED_ARROW) {
@@ -359,10 +344,11 @@ public class ModCauldronBehaviors {
                     }
                 }
 
-                // Create the tipped arrows with the exact same potion contents
+                // Create the tipped arrows with the exact same potion
                 ItemStack tippedArrows = new ItemStack(tippedItem, toTip);
-                tippedArrows.set(DataComponentTypes.POTION_CONTENTS, storedContents);
-                tippedArrows.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(customNbt));
+                PotionUtil.setPotion(tippedArrows, storedPotion);
+                NbtCompound nbt = tippedArrows.getOrCreateNbt();
+                nbt.put("CauldronData", customNbt);
 
                 // Consume arrows
                 if (!player.getAbilities().creativeMode) {
@@ -385,26 +371,26 @@ public class ModCauldronBehaviors {
                 world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
             }
         }
-        return ItemActionResult.success(world.isClient);
+        return ActionResult.success(world.isClient);
     }
 
     // ==================== BREWING CAULDRON BEHAVIORS ====================
 
     private static void registerBrewingCauldronBehaviors() {
-        Map<Item, CauldronBehavior> brewMap = ModBlocks.BREWING_CAULDRON_BEHAVIOR.map();
+        Map<Item, CauldronBehavior> brewMap = ModBlocks.BREWING_CAULDRON_BEHAVIOR;
 
         // Glass bottle -> extract current potion (if not actively brewing)
         brewMap.put(Items.GLASS_BOTTLE, (state, world, pos, player, hand, stack) -> {
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
                 if (be instanceof BrewingCauldronBlockEntity brewBE) {
-                    if (brewBE.isBrewing()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+                    if (brewBE.isBrewing()) return ActionResult.PASS;
 
-                    PotionContentsComponent contents = brewBE.getCurrentPotion();
-                    if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+                    Potion potion = brewBE.getCurrentPotion();
+                    if (potion == null) return ActionResult.PASS;
 
                     ItemStack potionStack = new ItemStack(Items.POTION);
-                    potionStack.set(DataComponentTypes.POTION_CONTENTS, contents);
+                    PotionUtil.setPotion(potionStack, potion);
 
                     if (!player.getAbilities().creativeMode) {
                         stack.decrement(1);
@@ -421,7 +407,7 @@ public class ModCauldronBehaviors {
                     world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
                 }
             }
-            return ItemActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient);
         });
 
         // Bucket empties the brewing cauldron
@@ -431,11 +417,11 @@ public class ModCauldronBehaviors {
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
                 world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
             }
-            return ItemActionResult.success(world.isClient);
+            return ActionResult.success(world.isClient);
         });
 
         // Block leather armor from interacting with brewing cauldrons
-        CauldronBehavior noOp = (state, world, pos, player, hand, stack) -> ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        CauldronBehavior noOp = (state, world, pos, player, hand, stack) -> ActionResult.PASS;
         brewMap.put(Items.LEATHER_HELMET, noOp);
         brewMap.put(Items.LEATHER_CHESTPLATE, noOp);
         brewMap.put(Items.LEATHER_LEGGINGS, noOp);

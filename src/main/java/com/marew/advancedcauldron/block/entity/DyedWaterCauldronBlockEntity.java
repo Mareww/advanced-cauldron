@@ -9,7 +9,6 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
-import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
@@ -31,11 +30,8 @@ public class DyedWaterCauldronBlockEntity extends BlockEntity {
         scheduleSync();
     }
 
-    /**
-     * Mix a new dye color into the existing water color (Bedrock-style averaging).
-     */
     public void mixColor(DyeColor dyeColor) {
-        int dyeRgb = dyeColor.getEntityColor();
+        int dyeRgb = dyeColor.getSignColor();
 
         int r1 = (this.color >> 16) & 0xFF;
         int g1 = (this.color >> 8) & 0xFF;
@@ -61,21 +57,20 @@ public class DyedWaterCauldronBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
-        super.readNbt(nbt, registryLookup);
+    public void readNbt(NbtCompound nbt) {
+        super.readNbt(nbt);
         if (nbt.contains("Color")) {
             this.color = nbt.getInt("Color");
         }
 
-        // When client receives updated block entity data, rebuild chunk mesh so tint color applies
         if (this.world != null && this.world.isClient) {
             this.world.updateListeners(this.pos, Blocks.CAULDRON.getDefaultState(), this.getCachedState(), Block.NOTIFY_ALL);
         }
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registryLookup) {
-        super.writeNbt(nbt, registryLookup);
+    protected void writeNbt(NbtCompound nbt) {
+        super.writeNbt(nbt);
         nbt.putInt("Color", this.color);
     }
 
@@ -86,7 +81,7 @@ public class DyedWaterCauldronBlockEntity extends BlockEntity {
     }
 
     @Override
-    public NbtCompound toInitialChunkDataNbt(RegistryWrapper.WrapperLookup registryLookup) {
-        return createNbt(registryLookup);
+    public NbtCompound toInitialChunkDataNbt() {
+        return createNbt();
     }
 }

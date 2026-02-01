@@ -4,7 +4,6 @@ import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
 import com.marew.advancedcauldron.config.ModConfig;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.util.HeatDamageUtil;
-import com.mojang.serialization.MapCodec;
 import net.minecraft.block.*;
 import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.entity.BlockEntity;
@@ -13,32 +12,27 @@ import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
-import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
+
 public class BrewingCauldronBlock extends AbstractCauldronBlock implements BlockEntityProvider {
-    public static final MapCodec<BrewingCauldronBlock> CODEC = createCodec(
-            settings -> new BrewingCauldronBlock(settings, ModBlocks.BREWING_CAULDRON_BEHAVIOR)
-    );
     public static final IntProperty LEVEL = Properties.LEVEL_3;
 
-    public BrewingCauldronBlock(Settings settings, CauldronBehavior.CauldronBehaviorMap behaviorMap) {
+    public BrewingCauldronBlock(Settings settings, Map<Item, CauldronBehavior> behaviorMap) {
         super(settings, behaviorMap);
         this.setDefaultState(this.stateManager.getDefaultState().with(LEVEL, 1));
-    }
-
-    @Override
-    public MapCodec<? extends BrewingCauldronBlock> getCodec() {
-        return CODEC;
     }
 
     @Override
@@ -77,7 +71,7 @@ public class BrewingCauldronBlock extends AbstractCauldronBlock implements Block
     }
 
     @Override
-    protected void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
+    public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
         if (world.isClient) return;
 
         HeatDamageUtil.tick(entity, world, pos);
@@ -91,12 +85,13 @@ public class BrewingCauldronBlock extends AbstractCauldronBlock implements Block
     }
 
     @Override
-    protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,
-                                             PlayerEntity player, Hand hand, BlockHitResult hit) {
-        CauldronBehavior behavior = this.behaviorMap.map().get(stack.getItem());
+    public ActionResult onUse(BlockState state, World world, BlockPos pos,
+                              PlayerEntity player, Hand hand, BlockHitResult hit) {
+        ItemStack stack = player.getStackInHand(hand);
+        CauldronBehavior behavior = this.behaviorMap.get(stack.getItem());
         if (behavior != null) {
-            ItemActionResult result = behavior.interact(state, world, pos, player, hand, stack);
-            if (result != ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            ActionResult result = behavior.interact(state, world, pos, player, hand, stack);
+            if (result != ActionResult.PASS) {
                 return result;
             }
         }
@@ -105,11 +100,11 @@ public class BrewingCauldronBlock extends AbstractCauldronBlock implements Block
             BlockEntity be = world.getBlockEntity(pos);
             if (be instanceof BrewingCauldronBlockEntity brewBE) {
                 if (brewBE.tryAddIngredientFromPlayer(player, hand)) {
-                    return ItemActionResult.SUCCESS;
+                    return ActionResult.SUCCESS;
                 }
             }
         }
-        return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return ActionResult.PASS;
     }
 
     @Override
