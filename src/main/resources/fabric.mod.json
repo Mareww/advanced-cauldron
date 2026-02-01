@@ -14,6 +14,7 @@
         "client": ["com.marew.advancedcauldron.client.AdvancedCauldronClient"],
         "modmenu": ["com.marew.advancedcauldron.config.ModMenuIntegration"]
     },
+    "accessWidener": "advancedcauldron.accesswidener",
     "mixins": ["advancedcauldron.mixins.json"],
     "depends": {
         "fabricloader": ">=0.15.0",
