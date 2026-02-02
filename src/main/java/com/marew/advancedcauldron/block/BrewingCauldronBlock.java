@@ -124,7 +124,11 @@ public class BrewingCauldronBlock extends AbstractCauldronBlock implements Block
     }
 
     public static void decrementLevel(BlockState state, World world, BlockPos pos) {
-        int level = state.get(LEVEL) - 1;
+        decrementLevels(state, world, pos, 1);
+    }
+
+    public static void decrementLevels(BlockState state, World world, BlockPos pos, int amount) {
+        int level = state.get(LEVEL) - amount;
         if (level <= 0) {
             world.setBlockState(pos, Blocks.CAULDRON.getDefaultState());
         } else {

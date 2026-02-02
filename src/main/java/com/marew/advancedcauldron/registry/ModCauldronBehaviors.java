@@ -340,7 +340,7 @@ public class ModCauldronBehaviors {
                 if (brewBE.isBrewing()) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
                 storedContents = brewBE.getCurrentPotion();
                 currentLevel = state.get(BrewingCauldronBlock.LEVEL);
-                tipsRemaining = ModConfig.get().arrowsPerCauldronLevel;
+                tipsRemaining = brewBE.getTipsRemaining();
             } else {
                 return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
             }
@@ -394,10 +394,10 @@ public class ModCauldronBehaviors {
                 if (levelsDrained > 0) {
                     PotionCauldronBlock.decrementLevels(state, world, pos, levelsDrained);
                 }
-            } else {
-                int levelsDrained = (toTip + arrowsPerLevel - 1) / arrowsPerLevel;
+            } else if (be instanceof BrewingCauldronBlockEntity brewBE) {
+                int levelsDrained = brewBE.consumeTips(toTip);
                 if (levelsDrained > 0) {
-                    BrewingCauldronBlock.decrementLevel(state, world, pos);
+                    BrewingCauldronBlock.decrementLevels(state, world, pos, levelsDrained);
                 }
             }
 
