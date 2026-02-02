@@ -13,6 +13,8 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
@@ -28,12 +30,16 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class BrewingCauldronBlockEntity extends BlockEntity {
 
     private Potion currentPotion;
     private int brewingProgress = 0;
     private boolean isBrewing = false;
-    private ItemStack pendingIngredient = ItemStack.EMPTY;
+    private final List<ItemStack> ingredientQueue = new ArrayList<>();
+    private int tipsUsed = 0;
 
     public BrewingCauldronBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.BREWING_CAULDRON_BLOCK_ENTITY, pos, state);
@@ -59,42 +65,75 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         return currentPotion;
     }
 
+    public int getTipsRemaining() {
+        return ModConfig.get().arrowsPerCauldronLevel - tipsUsed;
+    }
+
+    public int consumeTips(int count) {
+        tipsUsed += count;
+        int levelsDrained = tipsUsed / ModConfig.get().arrowsPerCauldronLevel;
+        tipsUsed = tipsUsed % ModConfig.get().arrowsPerCauldronLevel;
+        markDirty();
+        return levelsDrained;
+    }
+
+    private Potion getProjectedPotion() {
+        Potion projected = currentPotion;
+        for (ItemStack queued : ingredientQueue) {
+            Potion next = CauldronBrewingHelper.getBrewResult(world, projected, queued);
+            if (next != null) {
+                projected = next;
+            }
+        }
+        return projected;
+    }
+
     public void tryAddIngredient(ItemEntity itemEntity) {
-        if (isBrewing) return;
         if (world == null) return;
         if (!HeatSourceUtil.hasHeatSource(world, pos)) return;
 
         ItemStack stack = itemEntity.getStack();
-        Potion result = CauldronBrewingHelper.getBrewResult(world, currentPotion, stack);
+        Potion projected = getProjectedPotion();
+        Potion result = CauldronBrewingHelper.getBrewResult(world, projected, stack);
 
         if (result != null) {
             ItemStack copy = stack.copy();
             copy.setCount(1);
-            pendingIngredient = copy;
+            ingredientQueue.add(copy);
             stack.decrement(1);
             if (stack.isEmpty()) {
                 itemEntity.discard();
             }
-            startBrewing();
+            if (!isBrewing) {
+                startBrewing();
+            } else {
+                markDirty();
+                scheduleSync();
+            }
         }
     }
 
     public boolean tryAddIngredientFromPlayer(PlayerEntity player, Hand hand) {
-        if (isBrewing) return false;
         if (world == null) return false;
         if (!HeatSourceUtil.hasHeatSource(world, pos)) return false;
 
         ItemStack stack = player.getStackInHand(hand);
-        Potion result = CauldronBrewingHelper.getBrewResult(world, currentPotion, stack);
+        Potion projected = getProjectedPotion();
+        Potion result = CauldronBrewingHelper.getBrewResult(world, projected, stack);
 
         if (result != null) {
             ItemStack copy = stack.copy();
             copy.setCount(1);
-            pendingIngredient = copy;
+            ingredientQueue.add(copy);
             if (!player.getAbilities().creativeMode) {
                 stack.decrement(1);
             }
-            startBrewing();
+            if (!isBrewing) {
+                startBrewing();
+            } else {
+                markDirty();
+                scheduleSync();
+            }
             return true;
         }
         return false;
@@ -124,19 +163,25 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
     }
 
     private void completeBrewing(World world, BlockPos pos, BlockState state) {
-        Potion result = CauldronBrewingHelper.getBrewResult(world, currentPotion, pendingIngredient);
+        if (!ingredientQueue.isEmpty()) {
+            ItemStack ingredient = ingredientQueue.remove(0);
+            Potion result = CauldronBrewingHelper.getBrewResult(world, currentPotion, ingredient);
 
-        if (result != null) {
-            this.currentPotion = result;
+            if (result != null) {
+                this.currentPotion = result;
+            }
         }
 
-        this.isBrewing = false;
-        this.brewingProgress = 0;
-        this.pendingIngredient = ItemStack.EMPTY;
-        markDirty();
-        scheduleSync();
-
         world.playSound(null, pos, SoundEvents.BLOCK_BREWING_STAND_BREW, SoundCategory.BLOCKS, 1.0F, 1.0F);
+
+        if (!ingredientQueue.isEmpty()) {
+            startBrewing();
+        } else {
+            this.isBrewing = false;
+            this.brewingProgress = 0;
+            markDirty();
+            scheduleSync();
+        }
     }
 
     private void scheduleSync() {
@@ -156,8 +201,21 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         }
         this.brewingProgress = nbt.getInt("BrewingProgress");
         this.isBrewing = nbt.getBoolean("IsBrewing");
-        if (nbt.contains("PendingIngredient")) {
-            this.pendingIngredient = ItemStack.fromNbt(nbt.getCompound("PendingIngredient"));
+        this.tipsUsed = nbt.getInt("TipsUsed");
+        this.ingredientQueue.clear();
+        if (nbt.contains("IngredientQueue", NbtElement.LIST_TYPE)) {
+            NbtList list = nbt.getList("IngredientQueue", NbtElement.COMPOUND_TYPE);
+            for (int i = 0; i < list.size(); i++) {
+                ItemStack stack = ItemStack.fromNbt(list.getCompound(i));
+                if (!stack.isEmpty()) {
+                    this.ingredientQueue.add(stack);
+                }
+            }
+        } else if (nbt.contains("PendingIngredient")) {
+            ItemStack stack = ItemStack.fromNbt(nbt.getCompound("PendingIngredient"));
+            if (!stack.isEmpty()) {
+                this.ingredientQueue.add(stack);
+            }
         }
 
         if (this.world != null && this.world.isClient) {
@@ -174,10 +232,15 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         }
         nbt.putInt("BrewingProgress", this.brewingProgress);
         nbt.putBoolean("IsBrewing", this.isBrewing);
-        if (!this.pendingIngredient.isEmpty()) {
-            NbtCompound ingredientNbt = new NbtCompound();
-            this.pendingIngredient.writeNbt(ingredientNbt);
-            nbt.put("PendingIngredient", ingredientNbt);
+        nbt.putInt("TipsUsed", this.tipsUsed);
+        if (!this.ingredientQueue.isEmpty()) {
+            NbtList list = new NbtList();
+            for (ItemStack stack : this.ingredientQueue) {
+                NbtCompound ingredientNbt = new NbtCompound();
+                stack.writeNbt(ingredientNbt);
+                list.add(ingredientNbt);
+            }
+            nbt.put("IngredientQueue", list);
         }
     }
 
