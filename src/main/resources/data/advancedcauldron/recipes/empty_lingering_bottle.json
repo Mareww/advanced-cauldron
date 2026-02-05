@@ -1,0 +1,15 @@
+{
+    "type": "minecraft:crafting_shapeless",
+    "ingredients": [
+        {
+            "item": "advancedcauldron:empty_splash_bottle"
+        },
+        {
+            "item": "minecraft:dragon_breath"
+        }
+    ],
+    "result": {
+        "item": "advancedcauldron:empty_lingering_bottle",
+        "count": 1
+    }
+}

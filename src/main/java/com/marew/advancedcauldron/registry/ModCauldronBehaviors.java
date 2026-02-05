@@ -3,6 +3,7 @@ package com.marew.advancedcauldron.registry;
 import com.marew.advancedcauldron.AdvancedCauldron;
 import com.marew.advancedcauldron.block.BrewingCauldronBlock;
 import com.marew.advancedcauldron.block.DyedWaterCauldronBlock;
+import com.marew.advancedcauldron.block.MilkCauldronBlock;
 import com.marew.advancedcauldron.block.PotionCauldronBlock;
 import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.DyedWaterCauldronBlockEntity;
@@ -53,6 +54,7 @@ public class ModCauldronBehaviors {
         registerPotionCauldronBehaviors();
         registerDyedWaterCauldronBehaviors();
         registerBrewingCauldronBehaviors();
+        registerMilkCauldronBehaviors();
     }
 
     // ==================== WATER CAULDRON BEHAVIORS ====================
@@ -95,6 +97,23 @@ public class ModCauldronBehaviors {
 
     private static void registerEmptyCauldronBehaviors() {
         Map<Item, CauldronBehavior> emptyMap = CauldronBehavior.EMPTY_CAULDRON_BEHAVIOR.map();
+
+        // Milk bucket -> fill cauldron with milk
+        emptyMap.put(Items.MILK_BUCKET, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                world.setBlockState(pos, ModBlocks.MILK_CAULDRON.getDefaultState()
+                        .with(MilkCauldronBlock.LEVEL, 3));
+
+                if (!player.getAbilities().creativeMode) {
+                    player.setStackInHand(hand, new ItemStack(Items.BUCKET));
+                }
+
+                player.incrementStat(Stats.FILL_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
+            }
+            return ItemActionResult.success(world.isClient);
+        });
 
         emptyMap.put(Items.POTION, (state, world, pos, player, hand, stack) -> {
             PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
@@ -461,6 +480,85 @@ public class ModCauldronBehaviors {
         brewMap.put(Items.LEATHER_LEGGINGS, noOp);
         brewMap.put(Items.LEATHER_BOOTS, noOp);
         brewMap.put(Items.LEATHER_HORSE_ARMOR, noOp);
+    }
+
+    // ==================== MILK CAULDRON BEHAVIORS ====================
+
+    private static void registerMilkCauldronBehaviors() {
+        Map<Item, CauldronBehavior> milkMap = ModBlocks.MILK_CAULDRON_BEHAVIOR.map();
+
+        // Empty hand -> drink milk and clear effects
+        milkMap.put(Items.AIR, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                player.clearStatusEffects();
+                player.incrementStat(Stats.USE_CAULDRON);
+                MilkCauldronBlock.decrementLevel(state, world, pos);
+                world.playSound(null, pos, SoundEvents.ENTITY_GENERIC_DRINK, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ItemActionResult.success(world.isClient);
+        });
+
+        // Glass bottle -> gives milk bucket
+        milkMap.put(Items.GLASS_BOTTLE, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                ItemStack milkBucket = new ItemStack(Items.MILK_BUCKET);
+
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                }
+                if (!player.getInventory().insertStack(milkBucket)) {
+                    player.dropItem(milkBucket, false);
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                MilkCauldronBlock.decrementLevel(state, world, pos);
+                world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ItemActionResult.success(world.isClient);
+        });
+
+        // Bucket -> extract milk bucket (only when full)
+        milkMap.put(Items.BUCKET, (state, world, pos, player, hand, stack) -> {
+            int level = state.get(MilkCauldronBlock.LEVEL);
+            if (level < 3) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+
+            if (!world.isClient) {
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                }
+                ItemStack milkBucket = new ItemStack(Items.MILK_BUCKET);
+                if (stack.isEmpty()) {
+                    player.setStackInHand(hand, milkBucket);
+                } else if (!player.getInventory().insertStack(milkBucket)) {
+                    player.dropItem(milkBucket, false);
+                }
+
+                world.setBlockState(pos, Blocks.CAULDRON.getDefaultState());
+                world.playSound(null, pos, SoundEvents.ITEM_BUCKET_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ItemActionResult.success(world.isClient);
+        });
+
+        // Milk bucket -> fill more milk
+        milkMap.put(Items.MILK_BUCKET, (state, world, pos, player, hand, stack) -> {
+            int level = state.get(MilkCauldronBlock.LEVEL);
+            if (level >= 3) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+
+            if (!world.isClient) {
+                world.setBlockState(pos, state.with(MilkCauldronBlock.LEVEL, 3));
+
+                if (!player.getAbilities().creativeMode) {
+                    player.setStackInHand(hand, new ItemStack(Items.BUCKET));
+                }
+
+                world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
+            }
+            return ItemActionResult.success(world.isClient);
+        });
     }
 
     // ==================== UTILITIES ====================
