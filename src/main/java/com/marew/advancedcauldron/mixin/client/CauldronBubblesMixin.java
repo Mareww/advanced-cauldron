@@ -43,22 +43,36 @@ public abstract class CauldronBubblesMixin extends Block {
             );
         }
 
-        // Colored bubble particles - only during active brewing, from the liquid surface
+        // Bubble particles - only during active brewing
         BlockEntity be = world.getBlockEntity(pos);
         if (ModConfig.get().brewingBubbleParticlesEnabled && be instanceof BrewingCauldronBlockEntity brewBE && brewBE.isBrewing()) {
-            int color = CauldronColorUtil.getLiquidColor(world, pos);
-            if (color == -1) color = 0x3F76E4; // fallback to water blue
+            int targetColor = brewBE.getBrewingTargetColor();
 
-            for (int i = 0; i < 5; i++) {
+            // Constant bubble pop particles (white bubbles rising)
+            for (int i = 0; i < 3; i++) {
+                double angle = random.nextDouble() * Math.PI * 2;
+                double radius = 0.05 + random.nextDouble() * 0.2;
+                double x = pos.getX() + 0.5 + Math.cos(angle) * radius;
+                double z = pos.getZ() + 0.5 + Math.sin(angle) * radius;
+                double y = pos.getY() + 0.5 + random.nextDouble() * 0.1;
+
+                world.addParticle(
+                        ParticleTypes.BUBBLE_POP,
+                        x, y, z,
+                        0.0, 0.04 + random.nextDouble() * 0.02, 0.0
+                );
+            }
+
+            // Colored effect particles showing the target potion color
+            for (int i = 0; i < 4; i++) {
                 double angle = random.nextDouble() * Math.PI * 2;
                 double radius = 0.05 + random.nextDouble() * 0.25;
                 double x = pos.getX() + 0.5 + Math.cos(angle) * radius;
                 double z = pos.getZ() + 0.5 + Math.sin(angle) * radius;
-                // Spawn at the top of the liquid surface within the cauldron
                 double y = pos.getY() + 0.5 + random.nextDouble() * 0.15;
 
                 world.addParticle(
-                        EntityEffectParticleEffect.create(ParticleTypes.ENTITY_EFFECT, color),
+                        EntityEffectParticleEffect.create(ParticleTypes.ENTITY_EFFECT, targetColor),
                         x, y, z,
                         0.0, 0.03 + random.nextDouble() * 0.02, 0.0
                 );

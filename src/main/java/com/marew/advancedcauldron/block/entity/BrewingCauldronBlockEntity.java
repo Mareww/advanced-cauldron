@@ -52,6 +52,17 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         return 0x3F76E4;
     }
 
+    public int getBrewingTargetColor() {
+        if (!ingredientQueue.isEmpty() && world != null) {
+            ItemStack nextIngredient = ingredientQueue.get(0);
+            PotionContentsComponent result = CauldronBrewingHelper.getBrewResult(world, currentPotion, nextIngredient);
+            if (result != null) {
+                return result.getColor();
+            }
+        }
+        return getDisplayColor();
+    }
+
     public boolean isBrewing() {
         return isBrewing;
     }
