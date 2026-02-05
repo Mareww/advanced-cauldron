@@ -25,6 +25,7 @@
     "suggests": {
         "pnku-more-weapon-variants": "*",
         "modmenu": "*",
-        "cloth-config": "*"
+        "cloth-config": "*",
+        "polytone": "*"
     }
 }

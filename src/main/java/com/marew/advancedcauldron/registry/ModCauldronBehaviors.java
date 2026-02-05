@@ -3,6 +3,7 @@ package com.marew.advancedcauldron.registry;
 import com.marew.advancedcauldron.AdvancedCauldron;
 import com.marew.advancedcauldron.block.BrewingCauldronBlock;
 import com.marew.advancedcauldron.block.DyedWaterCauldronBlock;
+import com.marew.advancedcauldron.block.MilkCauldronBlock;
 import com.marew.advancedcauldron.block.PotionCauldronBlock;
 import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.DyedWaterCauldronBlockEntity;
@@ -15,8 +16,10 @@ import net.minecraft.block.LeveledCauldronBlock;
 import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.item.*;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionUtil;
 import net.minecraft.potion.Potions;
@@ -47,12 +50,85 @@ public class ModCauldronBehaviors {
         registerPotionCauldronBehaviors();
         registerDyedWaterCauldronBehaviors();
         registerBrewingCauldronBehaviors();
+        registerMilkCauldronBehaviors();
     }
 
     // ==================== WATER CAULDRON BEHAVIORS ====================
 
     private static void registerWaterCauldronBehaviors() {
         Map<Item, CauldronBehavior> waterMap = CauldronBehavior.WATER_CAULDRON_BEHAVIOR;
+
+        // Empty splash bottle -> fill with splash water bottle
+        waterMap.put(ModItems.EMPTY_SPLASH_BOTTLE, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                ItemStack splashBottle = new ItemStack(Items.SPLASH_POTION);
+                PotionUtil.setPotion(splashBottle, Potions.WATER);
+
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                }
+                if (stack.isEmpty()) {
+                    player.setStackInHand(hand, splashBottle);
+                } else if (!player.getInventory().insertStack(splashBottle)) {
+                    player.dropItem(splashBottle, false);
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                LeveledCauldronBlock.decrementFluidLevel(state, world, pos);
+                world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Empty lingering bottle -> fill with lingering water bottle
+        waterMap.put(ModItems.EMPTY_LINGERING_BOTTLE, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                ItemStack lingeringBottle = new ItemStack(Items.LINGERING_POTION);
+                PotionUtil.setPotion(lingeringBottle, Potions.WATER);
+
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                }
+                if (stack.isEmpty()) {
+                    player.setStackInHand(hand, lingeringBottle);
+                } else if (!player.getInventory().insertStack(lingeringBottle)) {
+                    player.dropItem(lingeringBottle, false);
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                LeveledCauldronBlock.decrementFluidLevel(state, world, pos);
+                world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Milk bucket -> clear player effects and drain 1 level
+        waterMap.put(Items.MILK_BUCKET, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                // Clear all player effects
+                player.clearStatusEffects();
+
+                // Drain 1 level
+                int currentLevel = state.get(LeveledCauldronBlock.LEVEL);
+                if (currentLevel <= 1) {
+                    world.setBlockState(pos, Blocks.CAULDRON.getDefaultState());
+                } else {
+                    world.setBlockState(pos, state.with(LeveledCauldronBlock.LEVEL, currentLevel - 1));
+                }
+
+                // Give back empty bucket
+                if (!player.getAbilities().creativeMode) {
+                    player.setStackInHand(hand, new ItemStack(Items.BUCKET));
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ENTITY_GENERIC_DRINK, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
 
         for (DyeColor color : DyeColor.values()) {
             Item dyeItem = getDyeItem(color);
@@ -88,6 +164,23 @@ public class ModCauldronBehaviors {
 
     private static void registerEmptyCauldronBehaviors() {
         Map<Item, CauldronBehavior> emptyMap = CauldronBehavior.EMPTY_CAULDRON_BEHAVIOR;
+
+        // Milk bucket -> fill cauldron with milk
+        emptyMap.put(Items.MILK_BUCKET, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                world.setBlockState(pos, ModBlocks.MILK_CAULDRON.getDefaultState()
+                        .with(MilkCauldronBlock.LEVEL, 3));
+
+                if (!player.getAbilities().creativeMode) {
+                    player.setStackInHand(hand, new ItemStack(Items.BUCKET));
+                }
+
+                player.incrementStat(Stats.FILL_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
 
         emptyMap.put(Items.POTION, (state, world, pos, player, hand, stack) -> {
             Potion potion = PotionUtil.getPotion(stack);
@@ -128,15 +221,14 @@ public class ModCauldronBehaviors {
     private static void registerPotionCauldronBehaviors() {
         Map<Item, CauldronBehavior> potionMap = ModBlocks.POTION_CAULDRON_BEHAVIOR;
 
-        // Glass bottle -> extract potion from cauldron
+        // Glass bottle -> extract potion from cauldron (25% extended)
         potionMap.put(Items.GLASS_BOTTLE, (state, world, pos, player, hand, stack) -> {
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
                 if (be instanceof PotionCauldronBlockEntity potionBE) {
                     Potion storedPotion = potionBE.getPotion();
                     if (storedPotion == null) return ActionResult.PASS;
-                    ItemStack potionStack = new ItemStack(Items.POTION);
-                    PotionUtil.setPotion(potionStack, storedPotion);
+                    ItemStack potionStack = createExtendedPotion(storedPotion, Items.POTION);
 
                     if (!player.getAbilities().creativeMode) {
                         stack.decrement(1);
@@ -145,6 +237,113 @@ public class ModCauldronBehaviors {
                         player.setStackInHand(hand, potionStack);
                     } else if (!player.getInventory().insertStack(potionStack)) {
                         player.dropItem(potionStack, false);
+                    }
+
+                    player.incrementStat(Stats.USE_CAULDRON);
+                    PotionCauldronBlock.decrementLevel(state, world, pos);
+                    world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                    world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+                }
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Milk bucket -> clear player effects and drain 1 level
+        potionMap.put(Items.MILK_BUCKET, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                player.clearStatusEffects();
+
+                int currentLevel = state.get(PotionCauldronBlock.LEVEL);
+                if (currentLevel <= 1) {
+                    world.setBlockState(pos, Blocks.CAULDRON.getDefaultState());
+                } else {
+                    world.setBlockState(pos, state.with(PotionCauldronBlock.LEVEL, currentLevel - 1));
+                }
+
+                if (!player.getAbilities().creativeMode) {
+                    player.setStackInHand(hand, new ItemStack(Items.BUCKET));
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ENTITY_GENERIC_DRINK, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Empty hand -> drink potion directly from cauldron
+        potionMap.put(Items.AIR, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof PotionCauldronBlockEntity potionBE) {
+                    Potion storedPotion = potionBE.getPotion();
+                    if (storedPotion == null || storedPotion.getEffects().isEmpty()) return ActionResult.PASS;
+
+                    // Apply potion effects (25% extended) directly to player
+                    for (StatusEffectInstance effect : storedPotion.getEffects()) {
+                        int extendedDuration = (int) (effect.getDuration() * 1.25);
+                        player.addStatusEffect(new StatusEffectInstance(
+                                effect.getEffectType(),
+                                extendedDuration,
+                                effect.getAmplifier(),
+                                effect.isAmbient(),
+                                effect.shouldShowParticles(),
+                                effect.shouldShowIcon()
+                        ));
+                    }
+
+                    player.incrementStat(Stats.USE_CAULDRON);
+                    PotionCauldronBlock.decrementLevel(state, world, pos);
+                    world.playSound(null, pos, SoundEvents.ENTITY_GENERIC_DRINK, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                    world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+                }
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Empty splash bottle -> fill with splash potion (25% extended)
+        potionMap.put(ModItems.EMPTY_SPLASH_BOTTLE, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof PotionCauldronBlockEntity potionBE) {
+                    Potion storedPotion = potionBE.getPotion();
+                    if (storedPotion == null) return ActionResult.PASS;
+                    ItemStack splashPotion = createExtendedPotion(storedPotion, Items.SPLASH_POTION);
+
+                    if (!player.getAbilities().creativeMode) {
+                        stack.decrement(1);
+                    }
+                    if (stack.isEmpty()) {
+                        player.setStackInHand(hand, splashPotion);
+                    } else if (!player.getInventory().insertStack(splashPotion)) {
+                        player.dropItem(splashPotion, false);
+                    }
+
+                    player.incrementStat(Stats.USE_CAULDRON);
+                    PotionCauldronBlock.decrementLevel(state, world, pos);
+                    world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                    world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+                }
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Empty lingering bottle -> fill with lingering potion (25% extended)
+        potionMap.put(ModItems.EMPTY_LINGERING_BOTTLE, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof PotionCauldronBlockEntity potionBE) {
+                    Potion storedPotion = potionBE.getPotion();
+                    if (storedPotion == null) return ActionResult.PASS;
+                    ItemStack lingeringPotion = createExtendedPotion(storedPotion, Items.LINGERING_POTION);
+
+                    if (!player.getAbilities().creativeMode) {
+                        stack.decrement(1);
+                    }
+                    if (stack.isEmpty()) {
+                        player.setStackInHand(hand, lingeringPotion);
+                    } else if (!player.getInventory().insertStack(lingeringPotion)) {
+                        player.dropItem(lingeringPotion, false);
                     }
 
                     player.incrementStat(Stats.USE_CAULDRON);
@@ -400,7 +599,7 @@ public class ModCauldronBehaviors {
     private static void registerBrewingCauldronBehaviors() {
         Map<Item, CauldronBehavior> brewMap = ModBlocks.BREWING_CAULDRON_BEHAVIOR;
 
-        // Glass bottle -> extract current potion (if not actively brewing)
+        // Glass bottle -> extract current potion (if not actively brewing) - 25% extended
         brewMap.put(Items.GLASS_BOTTLE, (state, world, pos, player, hand, stack) -> {
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
@@ -410,8 +609,7 @@ public class ModCauldronBehaviors {
                     Potion potion = brewBE.getCurrentPotion();
                     if (potion == null) return ActionResult.PASS;
 
-                    ItemStack potionStack = new ItemStack(Items.POTION);
-                    PotionUtil.setPotion(potionStack, potion);
+                    ItemStack potionStack = createExtendedPotion(potion, Items.POTION);
 
                     if (!player.getAbilities().creativeMode) {
                         stack.decrement(1);
@@ -420,6 +618,119 @@ public class ModCauldronBehaviors {
                         player.setStackInHand(hand, potionStack);
                     } else if (!player.getInventory().insertStack(potionStack)) {
                         player.dropItem(potionStack, false);
+                    }
+
+                    player.incrementStat(Stats.USE_CAULDRON);
+                    BrewingCauldronBlock.decrementLevel(state, world, pos);
+                    world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                    world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+                }
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Milk bucket -> clear player effects and drain 1 level
+        brewMap.put(Items.MILK_BUCKET, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                player.clearStatusEffects();
+
+                int currentLevel = state.get(BrewingCauldronBlock.LEVEL);
+                if (currentLevel <= 1) {
+                    world.setBlockState(pos, Blocks.CAULDRON.getDefaultState());
+                } else {
+                    world.setBlockState(pos, state.with(BrewingCauldronBlock.LEVEL, currentLevel - 1));
+                }
+
+                if (!player.getAbilities().creativeMode) {
+                    player.setStackInHand(hand, new ItemStack(Items.BUCKET));
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ENTITY_GENERIC_DRINK, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Empty hand -> drink potion directly from cauldron (if not brewing)
+        brewMap.put(Items.AIR, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof BrewingCauldronBlockEntity brewBE) {
+                    if (brewBE.isBrewing()) return ActionResult.PASS;
+
+                    Potion potion = brewBE.getCurrentPotion();
+                    if (potion == null || potion.getEffects().isEmpty()) return ActionResult.PASS;
+
+                    // Apply potion effects (25% extended) directly to player
+                    for (StatusEffectInstance effect : potion.getEffects()) {
+                        int extendedDuration = (int) (effect.getDuration() * 1.25);
+                        player.addStatusEffect(new StatusEffectInstance(
+                                effect.getEffectType(),
+                                extendedDuration,
+                                effect.getAmplifier(),
+                                effect.isAmbient(),
+                                effect.shouldShowParticles(),
+                                effect.shouldShowIcon()
+                        ));
+                    }
+
+                    player.incrementStat(Stats.USE_CAULDRON);
+                    BrewingCauldronBlock.decrementLevel(state, world, pos);
+                    world.playSound(null, pos, SoundEvents.ENTITY_GENERIC_DRINK, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                    world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+                }
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Empty splash bottle -> fill with splash potion (25% extended)
+        brewMap.put(ModItems.EMPTY_SPLASH_BOTTLE, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof BrewingCauldronBlockEntity brewBE) {
+                    if (brewBE.isBrewing()) return ActionResult.PASS;
+
+                    Potion potion = brewBE.getCurrentPotion();
+                    if (potion == null) return ActionResult.PASS;
+                    ItemStack splashPotion = createExtendedPotion(potion, Items.SPLASH_POTION);
+
+                    if (!player.getAbilities().creativeMode) {
+                        stack.decrement(1);
+                    }
+                    if (stack.isEmpty()) {
+                        player.setStackInHand(hand, splashPotion);
+                    } else if (!player.getInventory().insertStack(splashPotion)) {
+                        player.dropItem(splashPotion, false);
+                    }
+
+                    player.incrementStat(Stats.USE_CAULDRON);
+                    BrewingCauldronBlock.decrementLevel(state, world, pos);
+                    world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                    world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+                }
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Empty lingering bottle -> fill with lingering potion (25% extended)
+        brewMap.put(ModItems.EMPTY_LINGERING_BOTTLE, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof BrewingCauldronBlockEntity brewBE) {
+                    if (brewBE.isBrewing()) return ActionResult.PASS;
+
+                    Potion potion = brewBE.getCurrentPotion();
+                    if (potion == null) return ActionResult.PASS;
+                    ItemStack lingeringPotion = createExtendedPotion(potion, Items.LINGERING_POTION);
+
+                    if (!player.getAbilities().creativeMode) {
+                        stack.decrement(1);
+                    }
+                    if (stack.isEmpty()) {
+                        player.setStackInHand(hand, lingeringPotion);
+                    } else if (!player.getInventory().insertStack(lingeringPotion)) {
+                        player.dropItem(lingeringPotion, false);
                     }
 
                     player.incrementStat(Stats.USE_CAULDRON);
@@ -451,6 +762,127 @@ public class ModCauldronBehaviors {
     }
 
     // ==================== UTILITIES ====================
+
+
+    // ==================== MILK CAULDRON BEHAVIORS ====================
+
+    private static void registerMilkCauldronBehaviors() {
+        Map<Item, CauldronBehavior> milkMap = ModBlocks.MILK_CAULDRON_BEHAVIOR;
+
+        // Empty hand -> drink milk and clear effects
+        milkMap.put(Items.AIR, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                player.clearStatusEffects();
+                player.incrementStat(Stats.USE_CAULDRON);
+                MilkCauldronBlock.decrementLevel(state, world, pos);
+                world.playSound(null, pos, SoundEvents.ENTITY_GENERIC_DRINK, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Glass bottle -> extract milk bottle (gives milk bucket equivalent effect when consumed)
+        milkMap.put(Items.GLASS_BOTTLE, (state, world, pos, player, hand, stack) -> {
+            if (!world.isClient) {
+                ItemStack milkBucket = new ItemStack(Items.MILK_BUCKET);
+
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                }
+                // Give milk bucket since there's no milk bottle in vanilla
+                if (!player.getInventory().insertStack(milkBucket)) {
+                    player.dropItem(milkBucket, false);
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                MilkCauldronBlock.decrementLevel(state, world, pos);
+                world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Bucket -> empty the cauldron (like vanilla water cauldron)
+        milkMap.put(Items.BUCKET, (state, world, pos, player, hand, stack) -> {
+            int level = state.get(MilkCauldronBlock.LEVEL);
+            if (level < 3) return ActionResult.PASS; // Only full cauldrons can be bucketed
+
+            if (!world.isClient) {
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                }
+                ItemStack milkBucket = new ItemStack(Items.MILK_BUCKET);
+                if (stack.isEmpty()) {
+                    player.setStackInHand(hand, milkBucket);
+                } else if (!player.getInventory().insertStack(milkBucket)) {
+                    player.dropItem(milkBucket, false);
+                }
+
+                world.setBlockState(pos, Blocks.CAULDRON.getDefaultState());
+                world.playSound(null, pos, SoundEvents.ITEM_BUCKET_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        // Milk bucket -> fill more milk
+        milkMap.put(Items.MILK_BUCKET, (state, world, pos, player, hand, stack) -> {
+            int level = state.get(MilkCauldronBlock.LEVEL);
+            if (level >= 3) return ActionResult.PASS;
+
+            if (!world.isClient) {
+                world.setBlockState(pos, state.with(MilkCauldronBlock.LEVEL, 3));
+
+                if (!player.getAbilities().creativeMode) {
+                    player.setStackInHand(hand, new ItemStack(Items.BUCKET));
+                }
+
+                world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+    }
+
+    // ==================== UTILITIES ====================
+
+    /**
+     * Creates a potion item with 25% extended duration (cauldron advantage)
+     * Uses only CustomPotionEffects to avoid duplicate timer display
+     */
+    private static ItemStack createExtendedPotion(Potion potion, Item potionItem) {
+        ItemStack potionStack = new ItemStack(potionItem);
+
+        if (potion.getEffects().isEmpty()) {
+            // For potions with no effects (water, awkward, etc), just set the base potion
+            PotionUtil.setPotion(potionStack, potion);
+            return potionStack;
+        }
+
+        // Set the color to match the original potion
+        int color = PotionUtil.getColor(potion.getEffects());
+        potionStack.getOrCreateNbt().putInt("CustomPotionColor", color);
+
+        // Add extended effects
+        NbtList customEffects = new NbtList();
+        for (StatusEffectInstance effect : potion.getEffects()) {
+            int extendedDuration = (int) (effect.getDuration() * 1.25);
+            StatusEffectInstance extended = new StatusEffectInstance(
+                    effect.getEffectType(),
+                    extendedDuration,
+                    effect.getAmplifier(),
+                    effect.isAmbient(),
+                    effect.shouldShowParticles(),
+                    effect.shouldShowIcon()
+            );
+            NbtCompound effectNbt = new NbtCompound();
+            extended.writeNbt(effectNbt);
+            customEffects.add(effectNbt);
+        }
+        potionStack.getOrCreateNbt().put("CustomPotionEffects", customEffects);
+
+        return potionStack;
+    }
 
     private static Item getDyeItem(DyeColor color) {
         return switch (color) {

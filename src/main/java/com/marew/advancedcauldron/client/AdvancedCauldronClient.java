@@ -3,8 +3,12 @@ package com.marew.advancedcauldron.client;
 import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.DyedWaterCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
+import com.marew.advancedcauldron.particle.CauldronBubbleParticle;
+import com.marew.advancedcauldron.particle.CauldronSteamParticle;
 import com.marew.advancedcauldron.registry.ModBlocks;
+import com.marew.advancedcauldron.registry.ModParticles;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.potion.Potion;
@@ -45,5 +49,9 @@ public class AdvancedCauldronClient implements ClientModInitializer {
             }
             return 0x3F76E4;
         }, ModBlocks.BREWING_CAULDRON);
+
+        // Register custom cauldron bubble particle
+        ParticleFactoryRegistry.getInstance().register(ModParticles.CAULDRON_BUBBLE, CauldronBubbleParticle.Factory::new);
+        ParticleFactoryRegistry.getInstance().register(ModParticles.CAULDRON_STEAM, CauldronSteamParticle.Factory::new);
     }
 }
