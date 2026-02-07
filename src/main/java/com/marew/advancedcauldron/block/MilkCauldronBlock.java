@@ -2,6 +2,7 @@ package com.marew.advancedcauldron.block;
 
 import com.marew.advancedcauldron.block.entity.MilkCauldronBlockEntity;
 import com.marew.advancedcauldron.registry.ModBlocks;
+import com.marew.advancedcauldron.registry.ModCauldronBehaviors;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.Block;
@@ -12,9 +13,13 @@ import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
@@ -57,6 +62,14 @@ public class MilkCauldronBlock extends AbstractCauldronBlock implements BlockEnt
     @Override
     public int getComparatorOutput(BlockState state, World world, BlockPos pos) {
         return state.get(LEVEL);
+    }
+
+    @Override
+    protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
+        if (player.getStackInHand(Hand.MAIN_HAND).isEmpty()) {
+            return ModCauldronBehaviors.tryDrinkMilk(state, world, pos, player);
+        }
+        return super.onUse(state, world, pos, player, hit);
     }
 
     public static void decrementLevel(BlockState state, World world, BlockPos pos) {

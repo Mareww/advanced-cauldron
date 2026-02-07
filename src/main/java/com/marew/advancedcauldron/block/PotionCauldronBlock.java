@@ -93,6 +93,15 @@ public class PotionCauldronBlock extends AbstractCauldronBlock implements BlockE
     }
 
     @Override
+    protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
+        // Handle empty-hand drinking
+        if (player.getStackInHand(Hand.MAIN_HAND).isEmpty()) {
+            return ModCauldronBehaviors.tryDrinkFromPotionCauldron(state, world, pos, player);
+        }
+        return super.onUse(state, world, pos, player, hit);
+    }
+
+    @Override
     protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
         CauldronBehavior behavior = this.behaviorMap.map().get(stack.getItem());
         if (behavior != null) {

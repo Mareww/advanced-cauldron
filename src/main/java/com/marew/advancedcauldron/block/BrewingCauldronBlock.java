@@ -18,6 +18,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
+import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.hit.BlockHitResult;
@@ -89,6 +90,15 @@ public class BrewingCauldronBlock extends AbstractCauldronBlock implements Block
                 brewBE.tryAddIngredient(itemEntity);
             }
         }
+    }
+
+    @Override
+    protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
+        // Handle empty-hand drinking (only when not brewing)
+        if (player.getStackInHand(Hand.MAIN_HAND).isEmpty()) {
+            return ModCauldronBehaviors.tryDrinkFromBrewingCauldron(state, world, pos, player);
+        }
+        return super.onUse(state, world, pos, player, hit);
     }
 
     @Override

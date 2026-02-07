@@ -13,14 +13,14 @@ public class CauldronBubbleParticle extends SpriteBillboardParticle {
         super(world, x, y, z);
         this.spriteProvider = spriteProvider;
 
-        this.red = (float) r;
-        this.green = (float) g;
-        this.blue = (float) b;
-        this.alpha = 0.9F;
+        this.red = (float) Math.max(0.0, Math.min(1.0, r));
+        this.green = (float) Math.max(0.0, Math.min(1.0, g));
+        this.blue = (float) Math.max(0.0, Math.min(1.0, b));
+        this.alpha = 0.8F;
 
-        this.velocityX = (world.random.nextDouble() - 0.5) * 0.01;
+        this.velocityX = 0.0;
         this.velocityY = 0.002 + world.random.nextDouble() * 0.003;
-        this.velocityZ = (world.random.nextDouble() - 0.5) * 0.01;
+        this.velocityZ = 0.0;
 
         this.scale = 0.03F + world.random.nextFloat() * 0.02F;
         this.maxAge = 6 + world.random.nextInt(6);
@@ -41,8 +41,11 @@ public class CauldronBubbleParticle extends SpriteBillboardParticle {
 
         this.move(this.velocityX, this.velocityY, this.velocityZ);
 
-        float progress = (float) this.age / this.maxAge;
-        this.alpha = 0.9F * (1.0F - progress * 0.5F);
+        // Quick pop at end - scale up then disappear
+        if (this.age >= this.maxAge - 1) {
+            this.scale *= 1.5F;
+            this.alpha = 0.3F;
+        }
 
         this.setSpriteForAge(spriteProvider);
     }

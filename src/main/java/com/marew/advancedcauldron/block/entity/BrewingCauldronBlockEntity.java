@@ -11,8 +11,11 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.component.type.PotionContentsComponent;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -26,6 +29,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,25 +44,95 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
     private final List<ItemStack> ingredientQueue = new ArrayList<>();
     private int tipsUsed = 0;
 
+    // Color fade animation
+    private int fadeProgress = 0;
+    private int fadeStartColor = -1;
+    private static final int FADE_DURATION = 30; // 1.5 seconds
+
+    // Smooth color transition - stores the color at the start of brewing
+    private int brewingStartColor = -1;
+
     public BrewingCauldronBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlocks.BREWING_CAULDRON_BLOCK_ENTITY, pos, state);
         this.currentPotion = new PotionContentsComponent(Potions.WATER);
     }
 
     public int getDisplayColor() {
-        if (currentPotion != null) {
-            return currentPotion.getColor();
+        int baseColor = getBaseColor();
+
+        // During brewing: blend from start color to target color
+        if (isBrewing && !ingredientQueue.isEmpty()) {
+            int startColor = (brewingStartColor != -1) ? brewingStartColor : baseColor;
+            int targetColor = getTargetColor();
+            float progress = (float) brewingProgress / ModConfig.get().brewTimeTicks;
+            return lerpColor(startColor, targetColor, progress);
         }
-        return 0x3F76E4;
+
+        // During fade: blend from fade start color to final color
+        if (fadeProgress > 0 && fadeStartColor != -1) {
+            float progress = 1.0F - ((float) fadeProgress / FADE_DURATION);
+            return lerpColor(fadeStartColor, baseColor, progress);
+        }
+
+        return baseColor;
     }
 
-    public int getBrewingTargetColor() {
+    // Special colors for ingredients
+    private static final int NETHER_WART_COLOR = 0xB02020; // Bright red like nether wart
+
+    private int getTargetColor() {
         if (!ingredientQueue.isEmpty() && world != null) {
             ItemStack nextIngredient = ingredientQueue.get(0);
+
+            // Special color for nether wart
+            if (nextIngredient.isOf(Items.NETHER_WART)) {
+                return NETHER_WART_COLOR;
+            }
+
             PotionContentsComponent result = CauldronBrewingHelper.getBrewResult(world, currentPotion, nextIngredient);
             if (result != null) {
                 return result.getColor();
             }
+        }
+        return getBaseColor();
+    }
+
+    private int getBaseColor() {
+        if (currentPotion == null) return 0x3F76E4;
+
+        // Special handling for potions with no effects (awkward, mundane, thick, water)
+        java.util.Optional<net.minecraft.registry.entry.RegistryEntry<net.minecraft.potion.Potion>> potionOpt = currentPotion.potion();
+        if (potionOpt.isPresent()) {
+            net.minecraft.registry.entry.RegistryEntry<net.minecraft.potion.Potion> potion = potionOpt.get();
+            if (potion == Potions.AWKWARD) return 0x8B2252;
+            if (potion == Potions.MUNDANE) return 0x4060C0;
+            if (potion == Potions.THICK) return 0x5050A0;
+            if (potion == Potions.WATER) return 0x3F76E4;
+        }
+
+        // For potions with effects, use PotionContentsComponent.getColor()
+        return currentPotion.getColor();
+    }
+
+    private int lerpColor(int from, int to, float progress) {
+        int fromR = (from >> 16) & 0xFF;
+        int fromG = (from >> 8) & 0xFF;
+        int fromB = from & 0xFF;
+
+        int toR = (to >> 16) & 0xFF;
+        int toG = (to >> 8) & 0xFF;
+        int toB = to & 0xFF;
+
+        int r = (int) (fromR + (toR - fromR) * progress);
+        int g = (int) (fromG + (toG - fromG) * progress);
+        int b = (int) (fromB + (toB - fromB) * progress);
+
+        return (r << 16) | (g << 8) | b;
+    }
+
+    public int getBrewingBubbleColor() {
+        if (isBrewing && !ingredientQueue.isEmpty()) {
+            return getTargetColor();
         }
         return getDisplayColor();
     }
@@ -146,6 +220,8 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
     }
 
     private void startBrewing() {
+        // Capture current color for smooth transition
+        this.brewingStartColor = getDisplayColor();
         this.isBrewing = true;
         this.brewingProgress = 0;
         markDirty();
@@ -153,6 +229,37 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
     }
 
     public void tick(World world, BlockPos pos, BlockState state) {
+        // Handle fade animation
+        if (fadeProgress > 0) {
+            fadeProgress--;
+            if (fadeProgress == 0) {
+                fadeStartColor = -1;
+            }
+            scheduleSync();
+        }
+
+        // Apply potion effects to entities standing in the cauldron
+        if (currentPotion != null) {
+            java.util.Optional<net.minecraft.registry.entry.RegistryEntry<net.minecraft.potion.Potion>> potionOpt = currentPotion.potion();
+            if (potionOpt.isPresent() && !potionOpt.get().value().getEffects().isEmpty()) {
+                Box cauldronBox = new Box(pos.getX() + 0.1, pos.getY(), pos.getZ() + 0.1,
+                        pos.getX() + 0.9, pos.getY() + 1.0, pos.getZ() + 0.9);
+                for (LivingEntity entity : world.getEntitiesByClass(LivingEntity.class, cauldronBox, e -> true)) {
+                    for (StatusEffectInstance effect : potionOpt.get().value().getEffects()) {
+                        // Apply short duration effect (refreshed each tick)
+                        entity.addStatusEffect(new StatusEffectInstance(
+                                effect.getEffectType(),
+                                40, // 2 seconds, refreshed each tick
+                                effect.getAmplifier(),
+                                true, // ambient
+                                false, // show particles
+                                true // show icon
+                        ));
+                    }
+                }
+            }
+        }
+
         if (!isBrewing) return;
         if (!HeatSourceUtil.hasHeatSource(world, pos)) return;
 
@@ -162,13 +269,15 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
             completeBrewing(world, pos, state);
         }
 
-        if (brewingProgress % 20 == 0) {
-            markDirty();
-            scheduleSync();
-        }
+        // Sync every tick for smooth color transitions
+        markDirty();
+        scheduleSync();
     }
 
     private void completeBrewing(World world, BlockPos pos, BlockState state) {
+        // Capture current display color before changing potion for fade effect
+        int colorBeforeChange = getDisplayColor();
+
         if (!ingredientQueue.isEmpty()) {
             ItemStack ingredient = ingredientQueue.remove(0);
             PotionContentsComponent result = CauldronBrewingHelper.getBrewResult(world, currentPotion, ingredient);
@@ -178,13 +287,23 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
             }
         }
 
-        world.playSound(null, pos, SoundEvents.BLOCK_BREWING_STAND_BREW, SoundCategory.BLOCKS, 1.0F, 1.0F);
-
         if (!ingredientQueue.isEmpty()) {
-            startBrewing();
+            // More ingredients to brew - continue without sound
+            // Use the color we just reached as the new start color
+            this.brewingStartColor = colorBeforeChange;
+            this.isBrewing = true;
+            this.brewingProgress = 0;
+            markDirty();
+            scheduleSync();
         } else {
+            // All ingredients done - play completion sound
+            world.playSound(null, pos, SoundEvents.BLOCK_BREWING_STAND_BREW, SoundCategory.BLOCKS, 1.0F, 1.0F);
             this.isBrewing = false;
             this.brewingProgress = 0;
+            this.brewingStartColor = -1;
+            // Start fade animation
+            this.fadeStartColor = colorBeforeChange;
+            this.fadeProgress = FADE_DURATION;
             markDirty();
             scheduleSync();
         }
@@ -209,6 +328,9 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         this.brewingProgress = nbt.getInt("BrewingProgress");
         this.isBrewing = nbt.getBoolean("IsBrewing");
         this.tipsUsed = nbt.getInt("TipsUsed");
+        this.fadeProgress = nbt.getInt("FadeProgress");
+        this.fadeStartColor = nbt.getInt("FadeStartColor");
+        this.brewingStartColor = nbt.getInt("BrewingStartColor");
         this.ingredientQueue.clear();
         if (nbt.contains("IngredientQueue", NbtElement.LIST_TYPE)) {
             NbtList list = nbt.getList("IngredientQueue", NbtElement.COMPOUND_TYPE);
@@ -238,6 +360,9 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         nbt.putInt("BrewingProgress", this.brewingProgress);
         nbt.putBoolean("IsBrewing", this.isBrewing);
         nbt.putInt("TipsUsed", this.tipsUsed);
+        nbt.putInt("FadeProgress", this.fadeProgress);
+        nbt.putInt("FadeStartColor", this.fadeStartColor);
+        nbt.putInt("BrewingStartColor", this.brewingStartColor);
         if (!this.ingredientQueue.isEmpty()) {
             NbtList list = new NbtList();
             for (ItemStack stack : this.ingredientQueue) {
