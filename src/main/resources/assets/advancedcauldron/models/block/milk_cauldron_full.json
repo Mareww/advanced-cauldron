@@ -1,7 +1,7 @@
 {
     "parent": "minecraft:block/template_cauldron_full",
     "textures": {
-        "content": "minecraft:block/water_still",
+        "content": "advancedcauldron:block/milk",
         "inside": "minecraft:block/cauldron_inner",
         "particle": "minecraft:block/cauldron_side",
         "side": "minecraft:block/cauldron_side",

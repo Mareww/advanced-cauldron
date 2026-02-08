@@ -38,7 +38,7 @@ public class CauldronColorUtil {
         }
 
         if (be instanceof MilkCauldronBlockEntity) {
-            return 0xFCFCFC; // White for milk
+            return 0xFFFFFF; // White for milk
         }
 
         return -1;

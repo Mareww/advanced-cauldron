@@ -39,6 +39,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.text.Text;
 import net.minecraft.world.event.GameEvent;
 
 import java.util.Map;
@@ -796,19 +797,25 @@ public class ModCauldronBehaviors {
     // ==================== ARROW WASHING ====================
 
     /**
-     * Wash a tipped arrow in milk cauldron to return a normal arrow.
-     * Called from milk cauldron behavior map and MilkCauldronBlock.onUseWithItem().
+     * Wash tipped arrows in milk cauldron to return normal arrows.
+     * Washes up to arrowsPerCauldronLevel (default 16) per milk level consumed.
      */
     public static ItemActionResult tryWashArrow(BlockState state, World world, BlockPos pos,
                                                  PlayerEntity player, Hand hand, ItemStack stack) {
         if (!(stack.getItem() instanceof TippedArrowItem)) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
         if (!world.isClient) {
-            int count = stack.getCount();
-            ItemStack normalArrows = new ItemStack(Items.ARROW, count);
+            int arrowsPerLevel = ModConfig.get().arrowsPerCauldronLevel;
+            int toWash = Math.min(stack.getCount(), arrowsPerLevel);
+
+            ItemStack normalArrows = new ItemStack(Items.ARROW, toWash);
 
             if (!player.getAbilities().creativeMode) {
-                player.setStackInHand(hand, normalArrows);
+                stack.decrement(toWash);
+            }
+
+            if (!player.getInventory().insertStack(normalArrows)) {
+                player.dropItem(normalArrows, false);
             }
 
             player.incrementStat(Stats.USE_CAULDRON);
@@ -951,6 +958,12 @@ public class ModCauldronBehaviors {
         );
 
         potionStack.set(DataComponentTypes.POTION_CONTENTS, extended);
+
+        // Set the correct potion name (otherwise it shows "Uncraftable Potion")
+        String itemPath = Registries.ITEM.getId(potionItem).getPath();
+        String translationKey = Potion.finishTranslationKey(potionOpt, "item.minecraft." + itemPath + ".effect.");
+        potionStack.set(DataComponentTypes.ITEM_NAME, Text.translatable(translationKey));
+
         return potionStack;
     }
 
