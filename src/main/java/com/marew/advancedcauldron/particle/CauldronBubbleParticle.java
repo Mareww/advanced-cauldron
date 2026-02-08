@@ -23,7 +23,7 @@ public class CauldronBubbleParticle extends SpriteBillboardParticle {
         this.velocityZ = 0.0;
 
         this.scale = 0.03F + world.random.nextFloat() * 0.02F;
-        this.maxAge = 6 + world.random.nextInt(6);
+        this.maxAge = 15 + world.random.nextInt(10);
 
         this.setSpriteForAge(spriteProvider);
     }

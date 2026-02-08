@@ -35,7 +35,7 @@ public abstract class CauldronBubblesMixin extends Block {
 
         // Steam particles (white wispy steam) - constant
         if (ModConfig.get().steamParticlesEnabled) {
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 5; i++) {
                 double x = pos.getX() + 0.3 + random.nextDouble() * 0.4;
                 double z = pos.getZ() + 0.3 + random.nextDouble() * 0.4;
                 double y = pos.getY() + 0.95;
@@ -57,7 +57,7 @@ public abstract class CauldronBubblesMixin extends Block {
             float g = ((waterColor >> 8) & 0xFF) / 255.0F;
             float b = (waterColor & 0xFF) / 255.0F;
 
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 12; i++) {
                 double angle = random.nextDouble() * Math.PI * 2;
                 double radius = 0.05 + random.nextDouble() * 0.18;
                 double px = pos.getX() + 0.5 + Math.cos(angle) * radius;
@@ -71,12 +71,12 @@ public abstract class CauldronBubblesMixin extends Block {
                 );
             }
 
-            // Bubbling sound
+            // Bubbling sound (low volume to avoid spam)
             world.playSound(
                     pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                     SoundEvents.BLOCK_BUBBLE_COLUMN_BUBBLE_POP,
                     SoundCategory.BLOCKS,
-                    0.8F + random.nextFloat() * 0.4F,
+                    0.15F + random.nextFloat() * 0.1F,
                     0.8F + random.nextFloat() * 0.4F,
                     false
             );

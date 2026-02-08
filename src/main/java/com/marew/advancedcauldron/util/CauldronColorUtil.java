@@ -2,6 +2,7 @@ package com.marew.advancedcauldron.util;
 
 import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.DyedWaterCauldronBlockEntity;
+import com.marew.advancedcauldron.block.entity.MilkCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -34,6 +35,10 @@ public class CauldronColorUtil {
 
         if (be instanceof BrewingCauldronBlockEntity brewBE) {
             return brewBE.getDisplayColor();
+        }
+
+        if (be instanceof MilkCauldronBlockEntity) {
+            return 0xFCFCFC; // White for milk
         }
 
         return -1;

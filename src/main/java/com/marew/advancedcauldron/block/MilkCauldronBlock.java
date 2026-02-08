@@ -14,6 +14,9 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.TippedArrowItem;
+import net.minecraft.util.ItemActionResult;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
@@ -62,6 +65,15 @@ public class MilkCauldronBlock extends AbstractCauldronBlock implements BlockEnt
     @Override
     public int getComparatorOutput(BlockState state, World world, BlockPos pos) {
         return state.get(LEVEL);
+    }
+
+    @Override
+    protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+        // Handle tipped arrow washing
+        if (stack.getItem() instanceof TippedArrowItem) {
+            return ModCauldronBehaviors.tryWashArrow(state, world, pos, player, hand, stack);
+        }
+        return super.onUseWithItem(stack, state, world, pos, player, hand, hit);
     }
 
     @Override

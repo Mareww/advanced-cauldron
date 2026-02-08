@@ -769,6 +769,11 @@ public class ModCauldronBehaviors {
             return ItemActionResult.success(world.isClient);
         });
 
+        // Tipped arrow -> wash off potion, return normal arrow
+        milkMap.put(Items.TIPPED_ARROW, (state, world, pos, player, hand, stack) -> {
+            return tryWashArrow(state, world, pos, player, hand, stack);
+        });
+
         // Milk bucket -> fill more milk
         milkMap.put(Items.MILK_BUCKET, (state, world, pos, player, hand, stack) -> {
             int level = state.get(MilkCauldronBlock.LEVEL);
@@ -786,6 +791,32 @@ public class ModCauldronBehaviors {
             }
             return ItemActionResult.success(world.isClient);
         });
+    }
+
+    // ==================== ARROW WASHING ====================
+
+    /**
+     * Wash a tipped arrow in milk cauldron to return a normal arrow.
+     * Called from milk cauldron behavior map and MilkCauldronBlock.onUseWithItem().
+     */
+    public static ItemActionResult tryWashArrow(BlockState state, World world, BlockPos pos,
+                                                 PlayerEntity player, Hand hand, ItemStack stack) {
+        if (!(stack.getItem() instanceof TippedArrowItem)) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+
+        if (!world.isClient) {
+            int count = stack.getCount();
+            ItemStack normalArrows = new ItemStack(Items.ARROW, count);
+
+            if (!player.getAbilities().creativeMode) {
+                player.setStackInHand(hand, normalArrows);
+            }
+
+            player.incrementStat(Stats.USE_CAULDRON);
+            MilkCauldronBlock.decrementLevel(state, world, pos);
+            world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+            world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+        }
+        return ItemActionResult.success(world.isClient);
     }
 
     // ==================== EMPTY-HAND DRINKING ====================
