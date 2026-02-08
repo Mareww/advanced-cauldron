@@ -68,7 +68,11 @@ public class MilkCauldronBlock extends AbstractCauldronBlock implements BlockEnt
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
-        // Milk doesn't interact with rain
+        if (precipitation == Biome.Precipitation.RAIN
+                && state.get(LEVEL) < 3
+                && world.getRandom().nextFloat() < 0.05f) {
+            world.setBlockState(pos, state.with(LEVEL, state.get(LEVEL) + 1));
+        }
     }
 
     @Override
