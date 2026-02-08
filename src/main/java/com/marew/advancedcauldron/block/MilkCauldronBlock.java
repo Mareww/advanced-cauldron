@@ -2,6 +2,7 @@ package com.marew.advancedcauldron.block;
 
 import com.marew.advancedcauldron.block.entity.MilkCauldronBlockEntity;
 import com.marew.advancedcauldron.registry.ModBlocks;
+import com.marew.advancedcauldron.util.HeatDamageUtil;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
@@ -11,6 +12,7 @@ import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.entity.Entity;
 import net.minecraft.item.Item;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
@@ -43,6 +45,13 @@ public class MilkCauldronBlock extends AbstractCauldronBlock implements BlockEnt
     @Override
     protected double getFluidHeight(BlockState state) {
         return (6.0 + (double) state.get(LEVEL) * 3.0) / 16.0;
+    }
+
+    @Override
+    public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
+        if (!world.isClient) {
+            HeatDamageUtil.tick(entity, world, pos);
+        }
     }
 
     @Override
