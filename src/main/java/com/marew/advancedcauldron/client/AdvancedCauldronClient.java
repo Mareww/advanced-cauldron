@@ -40,6 +40,12 @@ public class AdvancedCauldronClient implements ClientModInitializer {
             return 0x3F76E4;
         }, ModBlocks.DYED_WATER_CAULDRON);
 
+        // Color the milk cauldron white
+        ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) -> {
+            if (tintIndex != 0) return -1;
+            return 0xFFFFFF; // Pure white for milk
+        }, ModBlocks.MILK_CAULDRON);
+
         // Color the brewing cauldron based on current potion state
         ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) -> {
             if (tintIndex != 0 || world == null || pos == null) return -1;

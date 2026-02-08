@@ -34,6 +34,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.text.Text;
 import net.minecraft.world.event.GameEvent;
 
 import java.util.Map;
@@ -825,6 +826,11 @@ public class ModCauldronBehaviors {
             return ActionResult.success(world.isClient);
         });
 
+        // Tipped arrow -> wash off potion, return normal arrow
+        milkMap.put(Items.TIPPED_ARROW, (state, world, pos, player, hand, stack) -> {
+            return tryWashArrow(state, world, pos, player, hand, stack);
+        });
+
         // Milk bucket -> fill more milk
         milkMap.put(Items.MILK_BUCKET, (state, world, pos, player, hand, stack) -> {
             int level = state.get(MilkCauldronBlock.LEVEL);
@@ -842,6 +848,38 @@ public class ModCauldronBehaviors {
             }
             return ActionResult.success(world.isClient);
         });
+    }
+
+    // ==================== ARROW WASHING ====================
+
+    /**
+     * Wash tipped arrows in milk cauldron to return normal arrows.
+     * Washes up to arrowsPerCauldronLevel (default 16) per milk level consumed.
+     */
+    public static ActionResult tryWashArrow(BlockState state, World world, BlockPos pos,
+                                             PlayerEntity player, Hand hand, ItemStack stack) {
+        if (!(stack.getItem() instanceof TippedArrowItem)) return ActionResult.PASS;
+
+        if (!world.isClient) {
+            int arrowsPerLevel = ModConfig.get().arrowsPerCauldronLevel;
+            int toWash = Math.min(stack.getCount(), arrowsPerLevel);
+
+            ItemStack normalArrows = new ItemStack(Items.ARROW, toWash);
+
+            if (!player.getAbilities().creativeMode) {
+                stack.decrement(toWash);
+            }
+
+            if (!player.getInventory().insertStack(normalArrows)) {
+                player.dropItem(normalArrows, false);
+            }
+
+            player.incrementStat(Stats.USE_CAULDRON);
+            MilkCauldronBlock.decrementLevel(state, world, pos);
+            world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 1.0F, 1.0F);
+            world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
+        }
+        return ActionResult.success(world.isClient);
     }
 
     // ==================== UTILITIES ====================
@@ -880,6 +918,11 @@ public class ModCauldronBehaviors {
             customEffects.add(effectNbt);
         }
         potionStack.getOrCreateNbt().put("CustomPotionEffects", customEffects);
+
+        // Set the correct potion name (otherwise it shows "Uncraftable Potion")
+        String itemPath = Registries.ITEM.getId(potionItem).getPath();
+        String translationKey = potion.finishTranslationKey("item.minecraft." + itemPath + ".effect.");
+        potionStack.setCustomName(Text.translatable(translationKey).styled(style -> style.withItalic(false)));
 
         return potionStack;
     }
