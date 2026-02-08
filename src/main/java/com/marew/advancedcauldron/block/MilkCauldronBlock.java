@@ -13,6 +13,8 @@ import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
+import com.marew.advancedcauldron.util.HeatDamageUtil;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.TippedArrowItem;
@@ -55,6 +57,13 @@ public class MilkCauldronBlock extends AbstractCauldronBlock implements BlockEnt
     @Override
     protected double getFluidHeight(BlockState state) {
         return (6.0 + (double) state.get(LEVEL) * 3.0) / 16.0;
+    }
+
+    @Override
+    public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
+        if (!world.isClient) {
+            HeatDamageUtil.tick(entity, world, pos);
+        }
     }
 
     @Override
