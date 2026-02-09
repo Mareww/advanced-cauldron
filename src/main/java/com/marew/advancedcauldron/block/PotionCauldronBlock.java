@@ -4,6 +4,7 @@ import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.registry.ModCauldronBehaviors;
 import com.marew.advancedcauldron.util.HeatDamageUtil;
+import com.marew.advancedcauldron.util.HeatSourceUtil;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.Block;
@@ -89,10 +90,11 @@ public class PotionCauldronBlock extends AbstractCauldronBlock implements BlockE
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
-        if (precipitation == Biome.Precipitation.RAIN
-                && state.get(LEVEL) < 3
-                && world.getRandom().nextFloat() < 0.05f) {
-            world.setBlockState(pos, state.with(LEVEL, state.get(LEVEL) + 1));
+        if (state.get(LEVEL) < 3 && world.getRandom().nextFloat() < 0.05f) {
+            if (precipitation == Biome.Precipitation.RAIN
+                    || (precipitation == Biome.Precipitation.SNOW && HeatSourceUtil.hasHeatSource(world, pos))) {
+                world.setBlockState(pos, state.with(LEVEL, state.get(LEVEL) + 1));
+            }
         }
     }
 
