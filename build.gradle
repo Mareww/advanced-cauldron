@@ -14,6 +14,17 @@ repositories {
     mavenCentral()
     maven { url "https://maven.shedaniel.me/" }
     maven { url "https://maven.terraformersmc.com/releases/" }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
 }
 
 loom {
@@ -30,6 +41,10 @@ dependencies {
         exclude(group: "net.fabricmc.fabric-api")
     }
     modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+    // Serene Seasons (optional integration)
+    modCompileOnly "maven.modrinth:serene-seasons:c1BdjabH"
+    modCompileOnly "maven.modrinth:glitchcore:25HLOiOl"
 }
 
 processResources {
