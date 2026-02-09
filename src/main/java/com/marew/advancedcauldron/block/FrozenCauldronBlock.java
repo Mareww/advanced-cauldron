@@ -1,5 +1,6 @@
 package com.marew.advancedcauldron.block;
 
+import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.util.HeatSourceUtil;
 import com.mojang.serialization.MapCodec;
@@ -68,6 +69,8 @@ public class FrozenCauldronBlock extends AbstractCauldronBlock {
     @Override
     protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (HeatSourceUtil.hasHeatSource(world, pos)) {
+            thaw(state, world, pos);
+        } else if (SereneSeasonsCompat.isLoaded() && SereneSeasonsCompat.isWarmEnoughToThaw(world, pos)) {
             thaw(state, world, pos);
         }
     }
