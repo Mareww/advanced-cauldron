@@ -3,6 +3,7 @@ package com.marew.advancedcauldron.block;
 import com.marew.advancedcauldron.block.entity.DyedWaterCauldronBlockEntity;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.util.HeatDamageUtil;
+import com.marew.advancedcauldron.util.HeatSourceUtil;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -79,10 +80,11 @@ public class DyedWaterCauldronBlock extends AbstractCauldronBlock implements Blo
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
-        if (precipitation == Biome.Precipitation.RAIN
-                && state.get(LEVEL) < 3
-                && world.getRandom().nextFloat() < 0.05f) {
-            world.setBlockState(pos, state.with(LEVEL, state.get(LEVEL) + 1));
+        if (state.get(LEVEL) < 3 && world.getRandom().nextFloat() < 0.05f) {
+            if (precipitation == Biome.Precipitation.RAIN
+                    || (precipitation == Biome.Precipitation.SNOW && HeatSourceUtil.hasHeatSource(world, pos))) {
+                world.setBlockState(pos, state.with(LEVEL, state.get(LEVEL) + 1));
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package com.marew.advancedcauldron.registry;
 import com.marew.advancedcauldron.AdvancedCauldron;
 import com.marew.advancedcauldron.block.BrewingCauldronBlock;
 import com.marew.advancedcauldron.block.DyedWaterCauldronBlock;
+import com.marew.advancedcauldron.block.FrozenCauldronBlock;
 import com.marew.advancedcauldron.block.MilkCauldronBlock;
 import com.marew.advancedcauldron.block.PotionCauldronBlock;
 import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
@@ -36,6 +37,9 @@ public class ModBlocks {
     public static final Map<Item, CauldronBehavior> MILK_CAULDRON_BEHAVIOR =
             CauldronBehavior.createMap();
 
+    public static final Map<Item, CauldronBehavior> FROZEN_CAULDRON_BEHAVIOR =
+            CauldronBehavior.createMap();
+
     public static final Block POTION_CAULDRON = new PotionCauldronBlock(
             AbstractBlock.Settings.copy(Blocks.CAULDRON),
             POTION_CAULDRON_BEHAVIOR
@@ -56,6 +60,11 @@ public class ModBlocks {
             MILK_CAULDRON_BEHAVIOR
     );
 
+    public static final Block FROZEN_CAULDRON = new FrozenCauldronBlock(
+            AbstractBlock.Settings.copy(Blocks.CAULDRON),
+            FROZEN_CAULDRON_BEHAVIOR
+    );
+
     public static BlockEntityType<PotionCauldronBlockEntity> POTION_CAULDRON_BLOCK_ENTITY;
     public static BlockEntityType<DyedWaterCauldronBlockEntity> DYED_WATER_CAULDRON_BLOCK_ENTITY;
     public static BlockEntityType<BrewingCauldronBlockEntity> BREWING_CAULDRON_BLOCK_ENTITY;
@@ -66,6 +75,7 @@ public class ModBlocks {
         Registry.register(Registries.BLOCK, new Identifier(AdvancedCauldron.MOD_ID, "dyed_water_cauldron"), DYED_WATER_CAULDRON);
         Registry.register(Registries.BLOCK, new Identifier(AdvancedCauldron.MOD_ID, "brewing_cauldron"), BREWING_CAULDRON);
         Registry.register(Registries.BLOCK, new Identifier(AdvancedCauldron.MOD_ID, "milk_cauldron"), MILK_CAULDRON);
+        Registry.register(Registries.BLOCK, new Identifier(AdvancedCauldron.MOD_ID, "frozen_cauldron"), FROZEN_CAULDRON);
 
         POTION_CAULDRON_BLOCK_ENTITY = Registry.register(
                 Registries.BLOCK_ENTITY_TYPE,
