@@ -49,12 +49,23 @@ public class PotionCauldronBlockEntity extends BlockEntity {
         return ModConfig.get().arrowsPerCauldronLevel - tipsUsed;
     }
 
+    public int getTipsUsed() {
+        return tipsUsed;
+    }
+
     public int consumeTips(int count) {
         tipsUsed += count;
         int levelsDrained = tipsUsed / ModConfig.get().arrowsPerCauldronLevel;
         tipsUsed = tipsUsed % ModConfig.get().arrowsPerCauldronLevel;
         markDirty();
         return levelsDrained;
+    }
+
+    public void restoreFromFrozen(@Nullable Potion potion, int tipsUsed) {
+        this.potion = potion;
+        this.tipsUsed = tipsUsed;
+        markDirty();
+        scheduleSync();
     }
 
     @Override

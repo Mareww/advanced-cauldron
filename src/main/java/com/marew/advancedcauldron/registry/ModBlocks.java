@@ -8,6 +8,7 @@ import com.marew.advancedcauldron.block.MilkCauldronBlock;
 import com.marew.advancedcauldron.block.PotionCauldronBlock;
 import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.DyedWaterCauldronBlockEntity;
+import com.marew.advancedcauldron.block.entity.FrozenCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.MilkCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
@@ -69,6 +70,7 @@ public class ModBlocks {
     public static BlockEntityType<DyedWaterCauldronBlockEntity> DYED_WATER_CAULDRON_BLOCK_ENTITY;
     public static BlockEntityType<BrewingCauldronBlockEntity> BREWING_CAULDRON_BLOCK_ENTITY;
     public static BlockEntityType<MilkCauldronBlockEntity> MILK_CAULDRON_BLOCK_ENTITY;
+    public static BlockEntityType<FrozenCauldronBlockEntity> FROZEN_CAULDRON_BLOCK_ENTITY;
 
     public static void register() {
         Registry.register(Registries.BLOCK, new Identifier(AdvancedCauldron.MOD_ID, "potion_cauldron"), POTION_CAULDRON);
@@ -99,6 +101,12 @@ public class ModBlocks {
                 Registries.BLOCK_ENTITY_TYPE,
                 new Identifier(AdvancedCauldron.MOD_ID, "milk_cauldron_be"),
                 FabricBlockEntityTypeBuilder.create(MilkCauldronBlockEntity::new, MILK_CAULDRON).build()
+        );
+
+        FROZEN_CAULDRON_BLOCK_ENTITY = Registry.register(
+                Registries.BLOCK_ENTITY_TYPE,
+                new Identifier(AdvancedCauldron.MOD_ID, "frozen_cauldron_be"),
+                FabricBlockEntityTypeBuilder.create(FrozenCauldronBlockEntity::new, FROZEN_CAULDRON).build()
         );
     }
 }
