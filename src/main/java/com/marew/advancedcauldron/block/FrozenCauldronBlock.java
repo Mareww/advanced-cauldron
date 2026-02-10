@@ -84,7 +84,17 @@ public class FrozenCauldronBlock extends AbstractCauldronBlock implements BlockE
     protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         if (HeatSourceUtil.hasHeatSource(world, pos)) {
             thaw(state, world, pos);
-        } else if (SereneSeasonsCompat.isLoaded() && SereneSeasonsCompat.isWarmEnoughToThaw(world, pos)) {
+            return;
+        }
+
+        boolean shouldThaw;
+        if (SereneSeasonsCompat.isLoaded()) {
+            shouldThaw = SereneSeasonsCompat.isWarmEnoughToThaw(world, pos);
+        } else {
+            shouldThaw = !world.getBiome(pos).value().isCold(pos);
+        }
+
+        if (shouldThaw) {
             thaw(state, world, pos);
         }
     }

@@ -115,15 +115,22 @@ public class PotionCauldronBlock extends AbstractCauldronBlock implements BlockE
 
     @Override
     protected boolean hasRandomTicks(BlockState state) {
-        return SereneSeasonsCompat.isLoaded() || super.hasRandomTicks(state);
+        return true;
     }
 
     @Override
     protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         super.randomTick(state, world, pos, random);
-        if (!SereneSeasonsCompat.isLoaded()) return;
         if (HeatSourceUtil.hasHeatSource(world, pos)) return;
-        if (SereneSeasonsCompat.isColdEnoughToFreeze(world, pos)) {
+
+        boolean shouldFreeze;
+        if (SereneSeasonsCompat.isLoaded()) {
+            shouldFreeze = SereneSeasonsCompat.isColdEnoughToFreeze(world, pos);
+        } else {
+            shouldFreeze = world.getBiome(pos).value().isCold(pos);
+        }
+
+        if (shouldFreeze) {
             freezePotion(world, pos, state);
         }
     }
