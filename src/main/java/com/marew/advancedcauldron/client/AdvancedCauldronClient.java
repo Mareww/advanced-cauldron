@@ -52,13 +52,13 @@ public class AdvancedCauldronClient implements ClientModInitializer {
 
         // Color the frozen cauldron ice based on stored source color
         ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) -> {
-            if (tintIndex != 0 || world == null || pos == null) return -1;
+            if (tintIndex != 0 || world == null || pos == null) return 0xA0C8E8;
             BlockEntity be = world.getBlockEntity(pos);
             if (be instanceof FrozenCauldronBlockEntity frozenBE) {
                 int color = frozenBE.getColor();
                 if (color != -1) return color;
             }
-            return -1; // No tint (default ice color)
+            return 0xA0C8E8; // Default ice blue for water
         }, ModBlocks.FROZEN_CAULDRON);
 
         // Register custom cauldron bubble particle

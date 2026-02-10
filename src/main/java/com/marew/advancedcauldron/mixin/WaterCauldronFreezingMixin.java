@@ -43,7 +43,7 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
             }
         } else {
             // Water freezes
-            FrozenCauldronBlock.freeze(world, pos, level, "water", -1, null, 0);
+            FrozenCauldronBlock.freeze(world, pos, level, "water", 0xA0C8E8, null, 0);
         }
     }
 
@@ -72,7 +72,7 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
 
         if (shouldFreeze) {
             int level = state.get(LeveledCauldronBlock.LEVEL);
-            FrozenCauldronBlock.freeze(world, pos, level, "water", -1, null, 0);
+            FrozenCauldronBlock.freeze(world, pos, level, "water", 0xA0C8E8, null, 0);
         }
     }
 }
