@@ -2,7 +2,6 @@ package com.marew.advancedcauldron.mixin;
 
 import com.marew.advancedcauldron.block.FrozenCauldronBlock;
 import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
-import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.util.HeatSourceUtil;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.BlockState;
@@ -44,8 +43,7 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
             }
         } else {
             // Water freezes
-            world.setBlockState(pos, ModBlocks.FROZEN_CAULDRON.getDefaultState()
-                    .with(FrozenCauldronBlock.LEVEL, level));
+            FrozenCauldronBlock.freeze(world, pos, level, "water", -1, null, 0);
         }
     }
 
@@ -67,8 +65,7 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
         if (HeatSourceUtil.hasHeatSource(world, pos)) return;
         if (SereneSeasonsCompat.isColdEnoughToFreeze(world, pos)) {
             int level = state.get(LeveledCauldronBlock.LEVEL);
-            world.setBlockState(pos, ModBlocks.FROZEN_CAULDRON.getDefaultState()
-                    .with(FrozenCauldronBlock.LEVEL, level));
+            FrozenCauldronBlock.freeze(world, pos, level, "water", -1, null, 0);
         }
     }
 }

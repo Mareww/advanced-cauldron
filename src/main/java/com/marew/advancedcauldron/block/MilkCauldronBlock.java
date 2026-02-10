@@ -1,8 +1,11 @@
 package com.marew.advancedcauldron.block;
 
 import com.marew.advancedcauldron.block.entity.MilkCauldronBlockEntity;
+import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.registry.ModCauldronBehaviors;
+import com.marew.advancedcauldron.util.HeatDamageUtil;
+import com.marew.advancedcauldron.util.HeatSourceUtil;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.Block;
@@ -13,19 +16,20 @@ import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
-import com.marew.advancedcauldron.util.HeatDamageUtil;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.TippedArrowItem;
-import net.minecraft.util.ItemActionResult;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import org.jetbrains.annotations.Nullable;
@@ -68,6 +72,31 @@ public class MilkCauldronBlock extends AbstractCauldronBlock implements BlockEnt
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
+        if (precipitation == Biome.Precipitation.SNOW && world.getRandom().nextFloat() < 0.05f) {
+            if (!HeatSourceUtil.hasHeatSource(world, pos)) {
+                freezeMilk(world, pos, state);
+            }
+        }
+    }
+
+    @Override
+    protected boolean hasRandomTicks(BlockState state) {
+        return SereneSeasonsCompat.isLoaded() || super.hasRandomTicks(state);
+    }
+
+    @Override
+    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        super.randomTick(state, world, pos, random);
+        if (!SereneSeasonsCompat.isLoaded()) return;
+        if (HeatSourceUtil.hasHeatSource(world, pos)) return;
+        if (SereneSeasonsCompat.isColdEnoughToFreeze(world, pos)) {
+            freezeMilk(world, pos, state);
+        }
+    }
+
+    private void freezeMilk(World world, BlockPos pos, BlockState state) {
+        int level = state.get(LEVEL);
+        FrozenCauldronBlock.freeze(world, pos, level, "milk", 0xFFFFFF, null, 0);
     }
 
     @Override

@@ -1,15 +1,22 @@
 package com.marew.advancedcauldron.block;
 
+import com.marew.advancedcauldron.block.entity.FrozenCauldronBlockEntity;
+import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
 import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.util.HeatSourceUtil;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LeveledCauldronBlock;
 import net.minecraft.block.cauldron.CauldronBehavior;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.component.type.PotionContentsComponent;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -20,8 +27,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
+import org.jetbrains.annotations.Nullable;
 
-public class FrozenCauldronBlock extends AbstractCauldronBlock {
+public class FrozenCauldronBlock extends AbstractCauldronBlock implements BlockEntityProvider {
     public static final MapCodec<FrozenCauldronBlock> CODEC = createCodec(
             settings -> new FrozenCauldronBlock(settings, ModBlocks.FROZEN_CAULDRON_BEHAVIOR)
     );
@@ -57,6 +65,12 @@ public class FrozenCauldronBlock extends AbstractCauldronBlock {
         return state.get(LEVEL);
     }
 
+    @Nullable
+    @Override
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return new FrozenCauldronBlockEntity(pos, state);
+    }
+
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
     }
@@ -82,10 +96,54 @@ public class FrozenCauldronBlock extends AbstractCauldronBlock {
         }
     }
 
+    public static void freeze(World world, BlockPos pos, int level, String sourceType, int color,
+                               @Nullable NbtCompound potionData, int tipsUsed) {
+        world.setBlockState(pos, ModBlocks.FROZEN_CAULDRON.getDefaultState().with(LEVEL, level));
+        BlockEntity be = world.getBlockEntity(pos);
+        if (be instanceof FrozenCauldronBlockEntity frozenBE) {
+            frozenBE.setFrozenContents(sourceType, color, potionData, tipsUsed);
+        }
+    }
+
     private void thaw(BlockState state, World world, BlockPos pos) {
         int level = state.get(LEVEL);
-        world.setBlockState(pos, Blocks.WATER_CAULDRON.getDefaultState()
-                .with(LeveledCauldronBlock.LEVEL, level));
+        BlockEntity be = world.getBlockEntity(pos);
+        String sourceType = "water";
+        NbtCompound potionData = null;
+        int tipsUsed = 0;
+
+        if (be instanceof FrozenCauldronBlockEntity frozenBE) {
+            sourceType = frozenBE.getSourceType();
+            potionData = frozenBE.getPotionData();
+            tipsUsed = frozenBE.getTipsUsed();
+        }
+
+        switch (sourceType) {
+            case "potion" -> {
+                world.setBlockState(pos, ModBlocks.POTION_CAULDRON.getDefaultState()
+                        .with(PotionCauldronBlock.LEVEL, level));
+                BlockEntity newBe = world.getBlockEntity(pos);
+                if (newBe instanceof PotionCauldronBlockEntity potionBE) {
+                    PotionContentsComponent contents = null;
+                    if (potionData != null && potionData.contains("PotionContents")) {
+                        contents = PotionContentsComponent.CODEC
+                                .parse(world.getRegistryManager().getOps(NbtOps.INSTANCE),
+                                        potionData.get("PotionContents"))
+                                .result().orElse(null);
+                    }
+                    potionBE.restoreFromFrozen(contents, tipsUsed);
+                }
+            }
+            case "milk" -> {
+                world.setBlockState(pos, ModBlocks.MILK_CAULDRON.getDefaultState()
+                        .with(MilkCauldronBlock.LEVEL, level));
+            }
+            default -> {
+                world.setBlockState(pos, Blocks.WATER_CAULDRON.getDefaultState()
+                        .with(LeveledCauldronBlock.LEVEL, level));
+            }
+        }
+
         world.playSound(null, pos, SoundEvents.BLOCK_LAVA_EXTINGUISH, SoundCategory.BLOCKS, 0.5F, 1.4F);
     }
 }

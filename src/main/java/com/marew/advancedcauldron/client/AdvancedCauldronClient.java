@@ -2,6 +2,7 @@ package com.marew.advancedcauldron.client;
 
 import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.DyedWaterCauldronBlockEntity;
+import com.marew.advancedcauldron.block.entity.FrozenCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
 import com.marew.advancedcauldron.particle.CauldronBubbleParticle;
 import com.marew.advancedcauldron.particle.CauldronSteamParticle;
@@ -48,6 +49,17 @@ public class AdvancedCauldronClient implements ClientModInitializer {
             }
             return 0x3F76E4;
         }, ModBlocks.BREWING_CAULDRON);
+
+        // Color the frozen cauldron ice based on stored source color
+        ColorProviderRegistry.BLOCK.register((state, world, pos, tintIndex) -> {
+            if (tintIndex != 0 || world == null || pos == null) return -1;
+            BlockEntity be = world.getBlockEntity(pos);
+            if (be instanceof FrozenCauldronBlockEntity frozenBE) {
+                int color = frozenBE.getColor();
+                if (color != -1) return color;
+            }
+            return -1; // No tint (default ice color)
+        }, ModBlocks.FROZEN_CAULDRON);
 
         // Register custom cauldron bubble particle
         ParticleFactoryRegistry.getInstance().register(ModParticles.CAULDRON_BUBBLE, CauldronBubbleParticle.Factory::new);

@@ -1,6 +1,7 @@
 package com.marew.advancedcauldron.block;
 
 import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
+import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.registry.ModCauldronBehaviors;
 import com.marew.advancedcauldron.util.HeatDamageUtil;
@@ -13,8 +14,12 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.component.type.PotionContentsComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.IntProperty;
 import net.minecraft.state.property.Properties;
@@ -24,6 +29,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import org.jetbrains.annotations.Nullable;
@@ -90,11 +96,52 @@ public class PotionCauldronBlock extends AbstractCauldronBlock implements BlockE
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
-        if (state.get(LEVEL) < 3 && world.getRandom().nextFloat() < 0.05f) {
-            if (precipitation == Biome.Precipitation.RAIN
-                    || (precipitation == Biome.Precipitation.SNOW && HeatSourceUtil.hasHeatSource(world, pos))) {
+        if (world.getRandom().nextFloat() >= 0.05f) return;
+
+        if (precipitation == Biome.Precipitation.SNOW) {
+            if (HeatSourceUtil.hasHeatSource(world, pos)) {
+                if (state.get(LEVEL) < 3) {
+                    world.setBlockState(pos, state.with(LEVEL, state.get(LEVEL) + 1));
+                }
+            } else {
+                freezePotion(world, pos, state);
+            }
+        } else if (precipitation == Biome.Precipitation.RAIN) {
+            if (state.get(LEVEL) < 3) {
                 world.setBlockState(pos, state.with(LEVEL, state.get(LEVEL) + 1));
             }
+        }
+    }
+
+    @Override
+    protected boolean hasRandomTicks(BlockState state) {
+        return SereneSeasonsCompat.isLoaded() || super.hasRandomTicks(state);
+    }
+
+    @Override
+    protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
+        super.randomTick(state, world, pos, random);
+        if (!SereneSeasonsCompat.isLoaded()) return;
+        if (HeatSourceUtil.hasHeatSource(world, pos)) return;
+        if (SereneSeasonsCompat.isColdEnoughToFreeze(world, pos)) {
+            freezePotion(world, pos, state);
+        }
+    }
+
+    private void freezePotion(World world, BlockPos pos, BlockState state) {
+        int level = state.get(LEVEL);
+        BlockEntity be = world.getBlockEntity(pos);
+        if (be instanceof PotionCauldronBlockEntity potionBE) {
+            PotionContentsComponent contents = potionBE.getPotionContents();
+            int color = contents != null ? contents.getColor() : 0x3F76E4;
+            NbtCompound potionData = new NbtCompound();
+            if (contents != null) {
+                PotionContentsComponent.CODEC
+                        .encodeStart(world.getRegistryManager().getOps(NbtOps.INSTANCE), contents)
+                        .result()
+                        .ifPresent(encoded -> potionData.put("PotionContents", encoded));
+            }
+            FrozenCauldronBlock.freeze(world, pos, level, "potion", color, potionData, potionBE.getTipsUsed());
         }
     }
 
