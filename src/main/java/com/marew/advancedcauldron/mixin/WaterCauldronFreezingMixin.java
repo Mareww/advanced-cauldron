@@ -50,23 +50,30 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
         }
     }
 
-    // Serene Seasons: enable random ticks for water cauldrons so they can freeze seasonally
+    // Enable random ticks for water cauldrons so they can freeze from biome temperature
     @Override
     public boolean hasRandomTicks(BlockState state) {
-        if (state.isOf(Blocks.WATER_CAULDRON) && SereneSeasonsCompat.isLoaded()) {
+        if (state.isOf(Blocks.WATER_CAULDRON)) {
             return true;
         }
         return super.hasRandomTicks(state);
     }
 
-    // Serene Seasons: freeze water cauldrons when cold enough
+    // Freeze water cauldrons when cold enough (biome temperature or Serene Seasons)
     @Override
     public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         super.randomTick(state, world, pos, random);
         if (!state.isOf(Blocks.WATER_CAULDRON)) return;
-        if (!SereneSeasonsCompat.isLoaded()) return;
         if (HeatSourceUtil.hasHeatSource(world, pos)) return;
-        if (SereneSeasonsCompat.isColdEnoughToFreeze(world, pos)) {
+
+        boolean shouldFreeze;
+        if (SereneSeasonsCompat.isLoaded()) {
+            shouldFreeze = SereneSeasonsCompat.isColdEnoughToFreeze(world, pos);
+        } else {
+            shouldFreeze = world.getBiome(pos).value().isCold(pos);
+        }
+
+        if (shouldFreeze) {
             int level = state.get(LeveledCauldronBlock.LEVEL);
             FrozenCauldronBlock.freeze(world, pos, level, "water", -1, null, 0);
         }

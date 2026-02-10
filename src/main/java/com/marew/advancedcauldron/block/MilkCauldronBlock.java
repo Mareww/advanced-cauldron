@@ -69,15 +69,22 @@ public class MilkCauldronBlock extends AbstractCauldronBlock implements BlockEnt
 
     @Override
     public boolean hasRandomTicks(BlockState state) {
-        return SereneSeasonsCompat.isLoaded() || super.hasRandomTicks(state);
+        return true;
     }
 
     @Override
     public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         super.randomTick(state, world, pos, random);
-        if (!SereneSeasonsCompat.isLoaded()) return;
         if (HeatSourceUtil.hasHeatSource(world, pos)) return;
-        if (SereneSeasonsCompat.isColdEnoughToFreeze(world, pos)) {
+
+        boolean shouldFreeze;
+        if (SereneSeasonsCompat.isLoaded()) {
+            shouldFreeze = SereneSeasonsCompat.isColdEnoughToFreeze(world, pos);
+        } else {
+            shouldFreeze = world.getBiome(pos).value().isCold(pos);
+        }
+
+        if (shouldFreeze) {
             freezeMilk(world, pos, state);
         }
     }
