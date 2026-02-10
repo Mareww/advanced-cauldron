@@ -68,6 +68,15 @@ public class FrozenCauldronBlock extends AbstractCauldronBlock implements BlockE
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
+        if (precipitation != Biome.Precipitation.SNOW) return;
+
+        BlockEntity be = world.getBlockEntity(pos);
+        if (be instanceof FrozenCauldronBlockEntity frozenBE && "snow".equals(frozenBE.getSourceType())) {
+            int level = state.get(LEVEL);
+            if (level < 3) {
+                world.setBlockState(pos, state.with(LEVEL, level + 1));
+            }
+        }
     }
 
     @Override
