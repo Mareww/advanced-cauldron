@@ -2,6 +2,7 @@ package com.marew.advancedcauldron.mixin;
 
 import com.marew.advancedcauldron.block.FrozenCauldronBlock;
 import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
+import com.marew.advancedcauldron.config.ModConfig;
 import com.marew.advancedcauldron.util.HeatSourceUtil;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.BlockState;
@@ -33,7 +34,7 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
 
         if (!state.isOf(Blocks.WATER_CAULDRON)) return;
         if (precipitation != Biome.Precipitation.SNOW) return;
-        if (world.getRandom().nextFloat() >= 0.05f) return;
+        if (world.getRandom().nextFloat() >= (float) ModConfig.get().freezeChance) return;
 
         int level = state.get(LeveledCauldronBlock.LEVEL);
 
@@ -42,7 +43,7 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
             if (level < 3) {
                 world.setBlockState(pos, state.with(LeveledCauldronBlock.LEVEL, level + 1));
             }
-        } else {
+        } else if (ModConfig.get().freezingEnabled) {
             // Water freezes
             FrozenCauldronBlock.freeze(world, pos, level, "water", 0xA0C8E8, null, 0);
         }
@@ -66,7 +67,7 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
         int level = state.get(LeveledCauldronBlock.LEVEL);
 
         // Rain/snow filling when exposed to sky
-        if (level < 3 && world.isRaining()) {
+        if (level < 3 && world.isRaining() && ModConfig.get().rainFillingEnabled) {
             boolean isExposed = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, pos).getY() <= pos.getY() + 1;
             if (isExposed) {
                 Biome biome = world.getBiome(pos).value();
@@ -85,6 +86,8 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
         }
 
         // Freezing (only without heat source)
+        if (!ModConfig.get().freezingEnabled) return;
+        if (!ModConfig.get().biomeTemperatureFreezingEnabled) return;
         if (HeatSourceUtil.hasHeatSource(world, pos)) return;
 
         boolean shouldFreeze;

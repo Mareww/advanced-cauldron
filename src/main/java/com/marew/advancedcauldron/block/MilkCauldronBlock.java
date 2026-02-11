@@ -2,6 +2,7 @@ package com.marew.advancedcauldron.block;
 
 import com.marew.advancedcauldron.block.entity.MilkCauldronBlockEntity;
 import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
+import com.marew.advancedcauldron.config.ModConfig;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.registry.ModCauldronBehaviors;
 import com.marew.advancedcauldron.util.HeatDamageUtil;
@@ -72,8 +73,8 @@ public class MilkCauldronBlock extends AbstractCauldronBlock implements BlockEnt
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
-        if (precipitation == Biome.Precipitation.SNOW && world.getRandom().nextFloat() < 0.05f) {
-            if (!HeatSourceUtil.hasHeatSource(world, pos)) {
+        if (precipitation == Biome.Precipitation.SNOW && world.getRandom().nextFloat() < (float) ModConfig.get().freezeChance) {
+            if (!HeatSourceUtil.hasHeatSource(world, pos) && ModConfig.get().freezingEnabled) {
                 freezeMilk(world, pos, state);
             }
         }
@@ -87,6 +88,8 @@ public class MilkCauldronBlock extends AbstractCauldronBlock implements BlockEnt
     @Override
     protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         super.randomTick(state, world, pos, random);
+        if (!ModConfig.get().freezingEnabled) return;
+        if (!ModConfig.get().biomeTemperatureFreezingEnabled) return;
         if (HeatSourceUtil.hasHeatSource(world, pos)) return;
 
         boolean shouldFreeze;

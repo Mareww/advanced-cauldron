@@ -3,6 +3,7 @@ package com.marew.advancedcauldron.block;
 import com.marew.advancedcauldron.block.entity.FrozenCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
 import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
+import com.marew.advancedcauldron.config.ModConfig;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.util.HeatSourceUtil;
 import com.mojang.serialization.MapCodec;
@@ -97,21 +98,23 @@ public class FrozenCauldronBlock extends AbstractCauldronBlock implements BlockE
             return;
         }
 
-        boolean shouldThaw;
-        if (SereneSeasonsCompat.isLoaded()) {
-            shouldThaw = SereneSeasonsCompat.isWarmEnoughToThaw(world, pos);
-        } else {
-            shouldThaw = !world.getBiome(pos).value().isCold(pos);
-        }
+        if (ModConfig.get().biomeTemperatureFreezingEnabled) {
+            boolean shouldThaw;
+            if (SereneSeasonsCompat.isLoaded()) {
+                shouldThaw = SereneSeasonsCompat.isWarmEnoughToThaw(world, pos);
+            } else {
+                shouldThaw = !world.getBiome(pos).value().isCold(pos);
+            }
 
-        if (shouldThaw) {
-            thaw(state, world, pos);
-            return;
+            if (shouldThaw) {
+                thaw(state, world, pos);
+                return;
+            }
         }
 
         // Snow accumulation for snow-filled cauldrons
         int level = state.get(LEVEL);
-        if (level < 3 && world.isRaining()) {
+        if (level < 3 && world.isRaining() && ModConfig.get().snowFillingEnabled) {
             boolean isExposed = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, pos).getY() <= pos.getY() + 1;
             if (isExposed) {
                 BlockEntity be = world.getBlockEntity(pos);
