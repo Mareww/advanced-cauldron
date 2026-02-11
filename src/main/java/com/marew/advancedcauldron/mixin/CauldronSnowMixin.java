@@ -1,6 +1,7 @@
 package com.marew.advancedcauldron.mixin;
 
 import com.marew.advancedcauldron.block.FrozenCauldronBlock;
+import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
 import com.marew.advancedcauldron.config.ModConfig;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.BlockState;
@@ -48,7 +49,14 @@ public abstract class CauldronSnowMixin extends AbstractCauldronBlock {
         Biome biome = world.getBiome(pos).value();
         if (!biome.hasPrecipitation()) return;
 
-        if (biome.isCold(pos)) {
+        boolean isCold;
+        if (SereneSeasonsCompat.isLoaded()) {
+            isCold = SereneSeasonsCompat.isColdEnoughToFreeze(world, pos);
+        } else {
+            isCold = biome.isCold(pos);
+        }
+
+        if (isCold) {
             if (ModConfig.get().snowFillingEnabled) {
                 FrozenCauldronBlock.freeze(world, pos, 1, "snow", 0xFFFFFF, null, 0);
             }
