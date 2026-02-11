@@ -26,6 +26,7 @@ import net.minecraft.state.property.Properties;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import org.jetbrains.annotations.Nullable;
@@ -100,6 +101,19 @@ public class FrozenCauldronBlock extends AbstractCauldronBlock implements BlockE
 
         if (shouldThaw) {
             thaw(state, world, pos);
+            return;
+        }
+
+        // Snow accumulation for snow-filled cauldrons
+        int level = state.get(LEVEL);
+        if (level < 3 && world.isRaining()) {
+            boolean isExposed = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, pos).getY() <= pos.getY() + 1;
+            if (isExposed) {
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof FrozenCauldronBlockEntity frozenBE && "snow".equals(frozenBE.getSourceType())) {
+                    world.setBlockState(pos, state.with(LEVEL, level + 1));
+                }
+            }
         }
     }
 
