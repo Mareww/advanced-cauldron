@@ -11,6 +11,7 @@ import net.minecraft.block.cauldron.CauldronBehavior;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import org.spongepowered.asm.mixin.Mixin;
@@ -56,11 +57,34 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
         return super.hasRandomTicks(state);
     }
 
-    // Freeze water cauldrons when cold enough (biome temperature or Serene Seasons)
+    // Fill water cauldrons from rain and freeze when cold enough
     @Override
     protected void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         super.randomTick(state, world, pos, random);
         if (!state.isOf(Blocks.WATER_CAULDRON)) return;
+
+        int level = state.get(LeveledCauldronBlock.LEVEL);
+
+        // Rain/snow filling when exposed to sky
+        if (level < 3 && world.isRaining()) {
+            boolean isExposed = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, pos).getY() <= pos.getY() + 1;
+            if (isExposed) {
+                Biome biome = world.getBiome(pos).value();
+                if (biome.hasPrecipitation()) {
+                    if (!biome.isCold(pos)) {
+                        // Rain fills the cauldron
+                        world.setBlockState(pos, state.with(LeveledCauldronBlock.LEVEL, level + 1));
+                        return;
+                    } else if (HeatSourceUtil.hasHeatSource(world, pos)) {
+                        // Snow melts into heated water, filling it
+                        world.setBlockState(pos, state.with(LeveledCauldronBlock.LEVEL, level + 1));
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Freezing (only without heat source)
         if (HeatSourceUtil.hasHeatSource(world, pos)) return;
 
         boolean shouldFreeze;
@@ -71,7 +95,7 @@ public abstract class WaterCauldronFreezingMixin extends AbstractCauldronBlock {
         }
 
         if (shouldFreeze) {
-            int level = state.get(LeveledCauldronBlock.LEVEL);
+            level = state.get(LeveledCauldronBlock.LEVEL);
             FrozenCauldronBlock.freeze(world, pos, level, "water", 0xA0C8E8, null, 0);
         }
     }
