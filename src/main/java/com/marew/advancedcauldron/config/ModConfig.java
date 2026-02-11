@@ -26,6 +26,13 @@ public class ModConfig {
     public boolean brewingBubbleParticlesEnabled = true;
     public boolean suppressCampfireSmoke = true;
 
+    // Weather & Freezing
+    public boolean freezingEnabled = true;
+    public boolean snowFillingEnabled = true;
+    public boolean rainFillingEnabled = true;
+    public double freezeChance = 0.05;
+    public boolean biomeTemperatureFreezingEnabled = true;
+
     public static ModConfig get() {
         return INSTANCE;
     }

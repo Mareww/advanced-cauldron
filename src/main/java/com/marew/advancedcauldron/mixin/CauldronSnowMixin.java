@@ -1,6 +1,7 @@
 package com.marew.advancedcauldron.mixin;
 
 import com.marew.advancedcauldron.block.FrozenCauldronBlock;
+import com.marew.advancedcauldron.config.ModConfig;
 import net.minecraft.block.AbstractCauldronBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -31,7 +32,7 @@ public abstract class CauldronSnowMixin extends AbstractCauldronBlock {
     private void advancedcauldron$handleSnowOnEmpty(
             BlockState state, World world, BlockPos pos,
             Biome.Precipitation precipitation, CallbackInfo ci) {
-        if (precipitation == Biome.Precipitation.SNOW) {
+        if (precipitation == Biome.Precipitation.SNOW && ModConfig.get().snowFillingEnabled) {
             FrozenCauldronBlock.freeze(world, pos, 1, "snow", 0xFFFFFF, null, 0);
             ci.cancel();
         }
@@ -51,9 +52,13 @@ public abstract class CauldronSnowMixin extends AbstractCauldronBlock {
         if (!biome.hasPrecipitation()) return;
 
         if (biome.isCold(pos)) {
-            FrozenCauldronBlock.freeze(world, pos, 1, "snow", 0xFFFFFF, null, 0);
+            if (ModConfig.get().snowFillingEnabled) {
+                FrozenCauldronBlock.freeze(world, pos, 1, "snow", 0xFFFFFF, null, 0);
+            }
         } else {
-            world.setBlockState(pos, Blocks.WATER_CAULDRON.getDefaultState());
+            if (ModConfig.get().rainFillingEnabled) {
+                world.setBlockState(pos, Blocks.WATER_CAULDRON.getDefaultState());
+            }
         }
     }
 }

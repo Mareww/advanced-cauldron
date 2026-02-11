@@ -92,6 +92,41 @@ public class ModConfigScreen {
                 .setSaveConsumer(val -> config.suppressCampfireSmoke = val)
                 .build());
 
+        // Weather & Freezing category
+        ConfigCategory weather = builder.getOrCreateCategory(Text.translatable("config.advancedcauldron.category.weather"));
+
+        weather.addEntry(entry.startBooleanToggle(Text.translatable("config.advancedcauldron.freezingEnabled"), config.freezingEnabled)
+                .setDefaultValue(defaults.freezingEnabled)
+                .setTooltip(Text.translatable("config.advancedcauldron.freezingEnabled.tooltip"))
+                .setSaveConsumer(val -> config.freezingEnabled = val)
+                .build());
+
+        weather.addEntry(entry.startBooleanToggle(Text.translatable("config.advancedcauldron.snowFillingEnabled"), config.snowFillingEnabled)
+                .setDefaultValue(defaults.snowFillingEnabled)
+                .setTooltip(Text.translatable("config.advancedcauldron.snowFillingEnabled.tooltip"))
+                .setSaveConsumer(val -> config.snowFillingEnabled = val)
+                .build());
+
+        weather.addEntry(entry.startBooleanToggle(Text.translatable("config.advancedcauldron.rainFillingEnabled"), config.rainFillingEnabled)
+                .setDefaultValue(defaults.rainFillingEnabled)
+                .setTooltip(Text.translatable("config.advancedcauldron.rainFillingEnabled.tooltip"))
+                .setSaveConsumer(val -> config.rainFillingEnabled = val)
+                .build());
+
+        weather.addEntry(entry.startDoubleField(Text.translatable("config.advancedcauldron.freezeChance"), config.freezeChance)
+                .setDefaultValue(defaults.freezeChance)
+                .setMin(0.0)
+                .setMax(1.0)
+                .setTooltip(Text.translatable("config.advancedcauldron.freezeChance.tooltip"))
+                .setSaveConsumer(val -> config.freezeChance = val)
+                .build());
+
+        weather.addEntry(entry.startBooleanToggle(Text.translatable("config.advancedcauldron.biomeTemperatureFreezingEnabled"), config.biomeTemperatureFreezingEnabled)
+                .setDefaultValue(defaults.biomeTemperatureFreezingEnabled)
+                .setTooltip(Text.translatable("config.advancedcauldron.biomeTemperatureFreezingEnabled.tooltip"))
+                .setSaveConsumer(val -> config.biomeTemperatureFreezingEnabled = val)
+                .build());
+
         builder.setSavingRunnable(ModConfig::save);
 
         return builder.build();

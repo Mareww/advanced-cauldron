@@ -33,5 +33,17 @@
     "config.advancedcauldron.brewingBubbleParticlesEnabled": "Brewing Bubble Particles",
     "config.advancedcauldron.brewingBubbleParticlesEnabled.tooltip": "Show colored bubble particles during brewing.",
     "config.advancedcauldron.suppressCampfireSmoke": "Suppress Campfire Smoke",
-    "config.advancedcauldron.suppressCampfireSmoke.tooltip": "Hide campfire smoke when a cauldron is placed above it."
+    "config.advancedcauldron.suppressCampfireSmoke.tooltip": "Hide campfire smoke when a cauldron is placed above it.",
+
+    "config.advancedcauldron.category.weather": "Weather & Freezing",
+    "config.advancedcauldron.freezingEnabled": "Freezing Enabled",
+    "config.advancedcauldron.freezingEnabled.tooltip": "Master toggle for all cauldron freezing from snow and cold biomes.",
+    "config.advancedcauldron.snowFillingEnabled": "Snow Filling Enabled",
+    "config.advancedcauldron.snowFillingEnabled.tooltip": "Snow accumulates in empty cauldrons and snow-filled cauldrons.",
+    "config.advancedcauldron.rainFillingEnabled": "Fast Rain Filling",
+    "config.advancedcauldron.rainFillingEnabled.tooltip": "Rain fills cauldrons via random ticks (faster, scales with randomTickSpeed).",
+    "config.advancedcauldron.freezeChance": "Freeze Chance",
+    "config.advancedcauldron.freezeChance.tooltip": "Chance per precipitation tick to freeze or fill from snow (0.0 to 1.0). Default: 0.05 (5%).",
+    "config.advancedcauldron.biomeTemperatureFreezingEnabled": "Biome Temperature Freezing",
+    "config.advancedcauldron.biomeTemperatureFreezingEnabled.tooltip": "Cauldrons freeze in cold biomes and thaw in warm biomes based on temperature."
 }

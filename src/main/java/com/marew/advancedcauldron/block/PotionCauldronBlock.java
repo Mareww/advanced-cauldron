@@ -2,6 +2,7 @@ package com.marew.advancedcauldron.block;
 
 import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
 import com.marew.advancedcauldron.compat.SereneSeasonsCompat;
+import com.marew.advancedcauldron.config.ModConfig;
 import com.marew.advancedcauldron.registry.ModBlocks;
 import com.marew.advancedcauldron.registry.ModCauldronBehaviors;
 import com.marew.advancedcauldron.util.HeatDamageUtil;
@@ -93,14 +94,14 @@ public class PotionCauldronBlock extends AbstractCauldronBlock implements BlockE
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
-        if (world.getRandom().nextFloat() >= 0.05f) return;
+        if (world.getRandom().nextFloat() >= ModConfig.get().freezeChance) return;
 
         if (precipitation == Biome.Precipitation.SNOW) {
             if (HeatSourceUtil.hasHeatSource(world, pos)) {
                 if (state.get(LEVEL) < 3) {
                     world.setBlockState(pos, state.with(LEVEL, state.get(LEVEL) + 1));
                 }
-            } else {
+            } else if (ModConfig.get().freezingEnabled) {
                 freezePotion(world, pos, state);
             }
         } else if (precipitation == Biome.Precipitation.RAIN) {
@@ -118,6 +119,8 @@ public class PotionCauldronBlock extends AbstractCauldronBlock implements BlockE
     @Override
     public void randomTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
         super.randomTick(state, world, pos, random);
+        if (!ModConfig.get().freezingEnabled) return;
+        if (!ModConfig.get().biomeTemperatureFreezingEnabled) return;
         if (HeatSourceUtil.hasHeatSource(world, pos)) return;
 
         boolean shouldFreeze;

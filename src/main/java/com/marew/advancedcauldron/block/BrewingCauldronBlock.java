@@ -117,7 +117,7 @@ public class BrewingCauldronBlock extends AbstractCauldronBlock implements Block
 
     @Override
     public void precipitationTick(BlockState state, World world, BlockPos pos, Biome.Precipitation precipitation) {
-        if (state.get(LEVEL) < 3 && world.getRandom().nextFloat() < 0.05f) {
+        if (state.get(LEVEL) < 3 && world.getRandom().nextFloat() < ModConfig.get().freezeChance) {
             if (precipitation == Biome.Precipitation.RAIN
                     || (precipitation == Biome.Precipitation.SNOW && HeatSourceUtil.hasHeatSource(world, pos))) {
                 world.setBlockState(pos, state.with(LEVEL, state.get(LEVEL) + 1));
