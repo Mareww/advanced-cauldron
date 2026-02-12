@@ -3,10 +3,12 @@ package com.marew.advancedcauldron.registry;
 import com.marew.advancedcauldron.AdvancedCauldron;
 import com.marew.advancedcauldron.block.BrewingCauldronBlock;
 import com.marew.advancedcauldron.block.DyedWaterCauldronBlock;
+import com.marew.advancedcauldron.block.FrozenCauldronBlock;
 import com.marew.advancedcauldron.block.MilkCauldronBlock;
 import com.marew.advancedcauldron.block.PotionCauldronBlock;
 import com.marew.advancedcauldron.block.entity.BrewingCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.DyedWaterCauldronBlockEntity;
+import com.marew.advancedcauldron.block.entity.FrozenCauldronBlockEntity;
 import com.marew.advancedcauldron.block.entity.PotionCauldronBlockEntity;
 import com.marew.advancedcauldron.config.ModConfig;
 import net.minecraft.block.Block;
@@ -58,6 +60,7 @@ public class ModCauldronBehaviors {
         registerDyedWaterCauldronBehaviors();
         registerBrewingCauldronBehaviors();
         registerMilkCauldronBehaviors();
+        registerFrozenCauldronBehaviors();
     }
 
     // ==================== WATER CAULDRON BEHAVIORS ====================
@@ -789,6 +792,48 @@ public class ModCauldronBehaviors {
 
                 world.playSound(null, pos, SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
                 world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
+            }
+            return ItemActionResult.success(world.isClient);
+        });
+    }
+
+    // ==================== FROZEN CAULDRON BEHAVIORS ====================
+
+    private static void registerFrozenCauldronBehaviors() {
+        Map<Item, CauldronBehavior> frozenMap = ModBlocks.FROZEN_CAULDRON_BEHAVIOR.map();
+
+        // Bucket -> pick up contents from full frozen cauldron
+        frozenMap.put(Items.BUCKET, (state, world, pos, player, hand, stack) -> {
+            int level = state.get(FrozenCauldronBlock.LEVEL);
+            if (level < 3) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+
+            if (!world.isClient) {
+                BlockEntity be = world.getBlockEntity(pos);
+                ItemStack resultBucket;
+
+                if (be instanceof FrozenCauldronBlockEntity frozenBE) {
+                    resultBucket = switch (frozenBE.getSourceType()) {
+                        case "snow" -> new ItemStack(Items.POWDER_SNOW_BUCKET);
+                        case "milk" -> new ItemStack(Items.MILK_BUCKET);
+                        default -> new ItemStack(Items.WATER_BUCKET);
+                    };
+                } else {
+                    resultBucket = new ItemStack(Items.WATER_BUCKET);
+                }
+
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                }
+                if (stack.isEmpty()) {
+                    player.setStackInHand(hand, resultBucket);
+                } else if (!player.getInventory().insertStack(resultBucket)) {
+                    player.dropItem(resultBucket, false);
+                }
+
+                world.setBlockState(pos, Blocks.CAULDRON.getDefaultState());
+                player.incrementStat(Stats.USE_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ITEM_BUCKET_FILL_POWDER_SNOW, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PICKUP, pos);
             }
             return ItemActionResult.success(world.isClient);
         });
