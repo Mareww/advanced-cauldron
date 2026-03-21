@@ -495,6 +495,7 @@ public class ModCauldronBehaviors {
         boolean isTippable = stack.isIn(TIPPABLE_ARROWS) || item instanceof ArrowItem;
 
         if (!isTippable) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (stack.contains(DataComponentTypes.POTION_CONTENTS)) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
         if (!world.isClient) {
             BlockEntity be = world.getBlockEntity(pos);
@@ -878,6 +879,7 @@ public class ModCauldronBehaviors {
      * Called from PotionCauldronBlock.onUse() since onUseWithItem is not invoked for empty hands in 1.21.1.
      */
     public static ActionResult tryDrinkFromPotionCauldron(BlockState state, World world, BlockPos pos, PlayerEntity player) {
+        if (!player.getMainHandStack().isEmpty()) return ActionResult.PASS;
         if (!world.isClient) {
             BlockEntity be = world.getBlockEntity(pos);
             if (be instanceof PotionCauldronBlockEntity potionBE) {
@@ -913,6 +915,7 @@ public class ModCauldronBehaviors {
      * Called from BrewingCauldronBlock.onUse().
      */
     public static ActionResult tryDrinkFromBrewingCauldron(BlockState state, World world, BlockPos pos, PlayerEntity player) {
+        if (!player.getMainHandStack().isEmpty()) return ActionResult.PASS;
         if (!world.isClient) {
             BlockEntity be = world.getBlockEntity(pos);
             if (be instanceof BrewingCauldronBlockEntity brewBE) {
@@ -950,6 +953,7 @@ public class ModCauldronBehaviors {
      * Called from MilkCauldronBlock.onUse().
      */
     public static ActionResult tryDrinkMilk(BlockState state, World world, BlockPos pos, PlayerEntity player) {
+        if (!player.getMainHandStack().isEmpty()) return ActionResult.PASS;
         if (!world.isClient) {
             player.clearStatusEffects();
             player.incrementStat(Stats.USE_CAULDRON);
