@@ -277,6 +277,7 @@ public class ModCauldronBehaviors {
 
         // Empty hand -> drink potion directly from cauldron
         potionMap.put(Items.AIR, (state, world, pos, player, hand, stack) -> {
+            if (!player.getMainHandStack().isEmpty()) return ActionResult.PASS;
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
                 if (be instanceof PotionCauldronBlockEntity potionBE) {
@@ -513,6 +514,7 @@ public class ModCauldronBehaviors {
         boolean isTippable = stack.isIn(TIPPABLE_ARROWS) || item instanceof ArrowItem;
 
         if (!isTippable) return ActionResult.PASS;
+        if (PotionUtil.getPotion(stack) != Potions.EMPTY) return ActionResult.PASS;
 
         if (!world.isClient) {
             // Get the potion from either block type
@@ -562,7 +564,7 @@ public class ModCauldronBehaviors {
                 }
             }
 
-            // Create the tipped arrows with the exact same potion
+            // Create the tipped arrows with the potion — ArrowEntityMixin scales duration to ÷4 on hit
             ItemStack tippedArrows = new ItemStack(tippedItem, toTip);
             PotionUtil.setPotion(tippedArrows, storedPotion);
             NbtCompound nbt = tippedArrows.getOrCreateNbt();
@@ -658,6 +660,7 @@ public class ModCauldronBehaviors {
 
         // Empty hand -> drink potion directly from cauldron (if not brewing)
         brewMap.put(Items.AIR, (state, world, pos, player, hand, stack) -> {
+            if (!player.getMainHandStack().isEmpty()) return ActionResult.PASS;
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
                 if (be instanceof BrewingCauldronBlockEntity brewBE) {
@@ -775,6 +778,7 @@ public class ModCauldronBehaviors {
 
         // Empty hand -> drink milk and clear effects
         milkMap.put(Items.AIR, (state, world, pos, player, hand, stack) -> {
+            if (!player.getMainHandStack().isEmpty()) return ActionResult.PASS;
             if (!world.isClient) {
                 player.clearStatusEffects();
                 player.incrementStat(Stats.USE_CAULDRON);
