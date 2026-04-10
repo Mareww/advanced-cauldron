@@ -1,5 +1,6 @@
 package com.marew.advancedcauldron.mixin;
 
+import com.marew.advancedcauldron.duck.ICauldronTipped;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.item.ItemStack;
