@@ -1,3 +1,4 @@
 accessWidener v2 named
 
 accessible field net/minecraft/block/AbstractCauldronBlock behaviorMap Ljava/util/Map;
+accessible method net/minecraft/entity/projectile/PersistentProjectileEntity asItemStack ()Lnet/minecraft/item/ItemStack;

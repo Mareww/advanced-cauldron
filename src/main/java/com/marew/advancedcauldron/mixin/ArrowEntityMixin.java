@@ -12,14 +12,19 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ArrowEntity.class)
-public class ArrowEntityMixin {
+public class ArrowEntityMixin implements ICauldronTipped {
 
     @Unique
     private boolean advancedcauldron$cauldronTipped = false;
 
+    @Override
+    public boolean advancedcauldron$isCauldronTipped() {
+        return this.advancedcauldron$cauldronTipped;
+    }
+
+    // Set flag when arrow entity is created from an item stack (bow shot)
     @Inject(method = "initFromStack", at = @At("RETURN"))
     private void advancedcauldron$checkCauldronTipped(ItemStack stack, CallbackInfo ci) {
         NbtCompound nbt = stack.getNbt();
@@ -28,17 +33,7 @@ public class ArrowEntityMixin {
         }
     }
 
-    // Inject into asItemStack() so the picked-up arrow item retains CauldronData
-    @Inject(method = "asItemStack", at = @At("RETURN"))
-    private void advancedcauldron$injectCauldronData(CallbackInfoReturnable<ItemStack> cir) {
-        if (this.advancedcauldron$cauldronTipped) {
-            NbtCompound cauldronData = new NbtCompound();
-            cauldronData.putBoolean("CauldronTipped", true);
-            cir.getReturnValue().getOrCreateNbt().put("CauldronData", cauldronData);
-        }
-    }
-
-    // Persist flag to entity NBT so it survives chunk save/load
+    // Persist flag so it survives chunk save/load
     @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
     private void advancedcauldron$writeNbt(NbtCompound nbt, CallbackInfo ci) {
         if (this.advancedcauldron$cauldronTipped) {
