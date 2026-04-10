@@ -4,8 +4,8 @@
     "block.advancedcauldron.brewing_cauldron": "Brewing Cauldron",
     "block.advancedcauldron.milk_cauldron": "Milk Cauldron",
 
-    "item.advancedcauldron.empty_splash_bottle": "Empty Splash Bottle",
-    "item.advancedcauldron.empty_lingering_bottle": "Empty Lingering Bottle",
+    "item.advancedcauldron.empty_splash_bottle": "Splash Bottle",
+    "item.advancedcauldron.empty_lingering_bottle": "Lingering Bottle",
 
     "config.advancedcauldron.title": "Advanced Cauldron Config",
     "config.advancedcauldron.category.brewing": "Brewing",

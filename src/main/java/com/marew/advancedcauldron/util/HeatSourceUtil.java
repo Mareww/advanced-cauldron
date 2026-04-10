@@ -15,8 +15,7 @@ public class HeatSourceUtil {
         if (belowState.isOf(Blocks.MAGMA_BLOCK)) return true;
         if (belowState.isOf(Blocks.FIRE)) return true;
         if (belowState.isOf(Blocks.SOUL_FIRE)) return true;
-        if (belowState.isOf(Blocks.CAMPFIRE) && belowState.get(CampfireBlock.LIT)) return true;
-        if (belowState.isOf(Blocks.SOUL_CAMPFIRE) && belowState.get(CampfireBlock.LIT)) return true;
+        if (belowState.getBlock() instanceof CampfireBlock && belowState.get(CampfireBlock.LIT)) return true;
 
         return false;
     }
