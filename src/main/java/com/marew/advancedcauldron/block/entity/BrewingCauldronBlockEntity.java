@@ -149,6 +149,12 @@ public class BrewingCauldronBlockEntity extends BlockEntity {
         return currentPotion;
     }
 
+    public void setCurrentPotion(PotionContentsComponent potion) {
+        this.currentPotion = potion;
+        markDirty();
+        scheduleSync();
+    }
+
     public int getTipsRemaining() {
         return ModConfig.get().arrowsPerCauldronLevel - tipsUsed;
     }

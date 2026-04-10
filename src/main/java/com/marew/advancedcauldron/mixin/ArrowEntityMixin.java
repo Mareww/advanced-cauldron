@@ -3,10 +3,8 @@ package com.marew.advancedcauldron.mixin;
 import it.unimi.dsi.fastutil.ints.Int2IntFunction;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.projectile.ArrowEntity;
-import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -21,9 +19,11 @@ public class ArrowEntityMixin {
     @Unique
     private boolean advancedcauldron$cauldronTipped = false;
 
-    @Inject(method = "onHit(Lnet/minecraft/entity/LivingEntity;)V", at = @At("HEAD"))
-    private void advancedcauldron$updateCauldronFlag(LivingEntity target, CallbackInfo ci) {
-        ItemStack stack = ((PersistentProjectileEntity) (Object) this).getItemStack();
+    // ArrowEntity overrides setStack, so this injection is valid.
+    // Called when the entity is created from an item OR when loaded from NBT
+    // (PersistentProjectileEntity.readCustomDataFromNbt calls setStack with the decoded item).
+    @Inject(method = "setStack", at = @At("HEAD"))
+    private void advancedcauldron$onSetStack(ItemStack stack, CallbackInfo ci) {
         NbtComponent customData = stack.get(DataComponentTypes.CUSTOM_DATA);
         this.advancedcauldron$cauldronTipped = customData != null && customData.copyNbt().getBoolean("CauldronTipped");
     }

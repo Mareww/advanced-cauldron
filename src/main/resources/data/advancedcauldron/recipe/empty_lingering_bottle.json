@@ -1,0 +1,15 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "category": "misc",
+    "pattern": [
+        "g ",
+        "gg"
+    ],
+    "key": {
+        "g": {"item": "minecraft:glass"}
+    },
+    "result": {
+        "id": "advancedcauldron:empty_lingering_bottle",
+        "count": 3
+    }
+}

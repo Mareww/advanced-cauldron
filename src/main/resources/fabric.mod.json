@@ -3,9 +3,12 @@
     "id": "advancedcauldron",
     "version": "${version}",
     "name": "Advanced Cauldron",
-    "description": "Adds potion cauldrons, dyed water cauldrons (Bedrock parity), and tipped arrow crafting via cauldrons.",
+    "description": "Expands cauldron functionality: brew potions step-by-step, store and tip arrows, craft splash and lingering potions, dye water (Bedrock parity), and more.",
     "authors": ["Marew"],
-    "contact": {},
+    "contact": {
+        "sources": "https://github.com/Mareww/advanced-cauldron",
+        "issues": "https://github.com/Mareww/advanced-cauldron/issues"
+    },
     "license": "MIT",
     "icon": "assets/advancedcauldron/icon.png",
     "environment": "*",
@@ -23,7 +26,6 @@
         "fabric-api": "*"
     },
     "suggests": {
-        "pnku-more-weapon-variants": "*",
         "modmenu": "*",
         "cloth-config": "*",
         "sereneseasons": "*"
