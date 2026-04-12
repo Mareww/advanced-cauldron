@@ -4,8 +4,12 @@ import com.marew.advancedcauldron.config.ModConfig;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -27,14 +31,17 @@ public class PersistentProjectileEntityMixin {
         }
 
         if (!ModConfig.get().cauldronArrowPickupRestoresEffect) {
-            // Strip the CauldronTipped flag so the arrow reverts to vanilla D/8 on next shot
+            // Return a plain (un-tipped) arrow — use OriginalArrow if stored, else vanilla arrow
             NbtCompound nbt = customData.copyNbt();
-            nbt.remove("CauldronTipped");
-            if (nbt.isEmpty()) {
-                stack.remove(DataComponentTypes.CUSTOM_DATA);
-            } else {
-                stack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(nbt));
+            Item plainArrow = Items.ARROW;
+            if (nbt.contains("OriginalArrow")) {
+                Identifier id = Identifier.tryParse(nbt.getString("OriginalArrow"));
+                if (id != null) {
+                    Item found = Registries.ITEM.get(id);
+                    if (found != Items.AIR) plainArrow = found;
+                }
             }
+            return new ItemStack(plainArrow, stack.getCount());
         }
 
         return stack;

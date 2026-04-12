@@ -29,6 +29,8 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.Potions;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.sound.SoundCategory;
@@ -458,10 +460,7 @@ public class ModCauldronBehaviors {
             int level = state.get(PotionCauldronBlock.LEVEL);
             if (level >= 3) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-            PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
-            if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-            Optional<RegistryEntry<Potion>> incomingOpt = contents.potion();
+            Optional<RegistryEntry<Potion>> incomingOpt = getEffectivePotionEntry(stack);
             if (incomingOpt.isEmpty() || incomingOpt.get() == Potions.WATER) {
                 return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
             }
@@ -500,10 +499,7 @@ public class ModCauldronBehaviors {
             int level = state.get(PotionCauldronBlock.LEVEL);
             if (level >= 3) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-            PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
-            if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-            Optional<RegistryEntry<Potion>> incomingOpt = contents.potion();
+            Optional<RegistryEntry<Potion>> incomingOpt = getEffectivePotionEntry(stack);
             if (incomingOpt.isEmpty() || incomingOpt.get() == Potions.WATER) {
                 return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
             }
@@ -815,10 +811,7 @@ public class ModCauldronBehaviors {
             int level = state.get(BrewingCauldronBlock.LEVEL);
             if (level >= 3) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-            PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
-            if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-            Optional<RegistryEntry<Potion>> incomingOpt = contents.potion();
+            Optional<RegistryEntry<Potion>> incomingOpt = getEffectivePotionEntry(stack);
             if (incomingOpt.isEmpty() || incomingOpt.get() == Potions.WATER) {
                 return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
             }
@@ -855,10 +848,7 @@ public class ModCauldronBehaviors {
             int level = state.get(BrewingCauldronBlock.LEVEL);
             if (level >= 3) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-            PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
-            if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-
-            Optional<RegistryEntry<Potion>> incomingOpt = contents.potion();
+            Optional<RegistryEntry<Potion>> incomingOpt = getEffectivePotionEntry(stack);
             if (incomingOpt.isEmpty() || incomingOpt.get() == Potions.WATER) {
                 return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
             }
@@ -1284,12 +1274,39 @@ public class ModCauldronBehaviors {
 
         potionStack.set(DataComponentTypes.POTION_CONTENTS, extended);
 
+        // Store original potion ID in CUSTOM_DATA so extended potions can be poured back into cauldrons
+        NbtCompound potionNbt = new NbtCompound();
+        potionNbt.putString("OriginalPotion", Registries.POTION.getId(potionOpt.get().value()).toString());
+        potionStack.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(potionNbt));
+
         // Set the correct potion name (otherwise it shows "Uncraftable Potion")
         String itemPath = Registries.ITEM.getId(potionItem).getPath();
         String translationKey = Potion.finishTranslationKey(potionOpt, "item.minecraft." + itemPath + ".effect.");
         potionStack.set(DataComponentTypes.ITEM_NAME, Text.translatable(translationKey));
 
         return potionStack;
+    }
+
+    /** Reads the effective potion from a stack, including extended potions made by createExtendedPotion. */
+    private static Optional<RegistryEntry<Potion>> getEffectivePotionEntry(ItemStack stack) {
+        PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
+        if (contents != null) {
+            Optional<RegistryEntry<Potion>> potionOpt = contents.potion();
+            if (potionOpt.isPresent()) return potionOpt;
+        }
+        // Check for OriginalPotion stored by createExtendedPotion
+        NbtComponent customData = stack.get(DataComponentTypes.CUSTOM_DATA);
+        if (customData != null) {
+            NbtCompound nbt = customData.copyNbt();
+            if (nbt.contains("OriginalPotion")) {
+                Identifier id = Identifier.tryParse(nbt.getString("OriginalPotion"));
+                if (id != null) {
+                    return Registries.POTION.getEntry(RegistryKey.of(RegistryKeys.POTION, id))
+                            .<RegistryEntry<Potion>>map(e -> e);
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     private static Item getDyeItem(DyeColor color) {
