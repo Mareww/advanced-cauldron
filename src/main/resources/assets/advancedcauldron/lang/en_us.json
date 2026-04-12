@@ -9,6 +9,7 @@
 
     "config.advancedcauldron.title": "Advanced Cauldron Config",
     "config.advancedcauldron.category.brewing": "Brewing",
+    "config.advancedcauldron.category.arrows": "Arrows",
     "config.advancedcauldron.category.heat": "Heat Damage",
     "config.advancedcauldron.category.particles": "Particles",
 
@@ -18,6 +19,8 @@
     "config.advancedcauldron.itemPickupDelayTicks.tooltip": "Minimum item age in ticks before cauldron picks it up. Default: 10.",
     "config.advancedcauldron.arrowsPerCauldronLevel": "Arrows per Cauldron Level",
     "config.advancedcauldron.arrowsPerCauldronLevel.tooltip": "Number of arrows that can be tipped per cauldron level. Default: 16.",
+    "config.advancedcauldron.cauldronArrowPickupRestoresEffect": "Arrow Pickup Restores Effect",
+    "config.advancedcauldron.cauldronArrowPickupRestoresEffect.tooltip": "When enabled, picking up a cauldron-tipped arrow gives back the tipped arrow with its full effect. When disabled, picked-up arrows revert to vanilla behavior (effect at 1/8 duration).",
 
     "config.advancedcauldron.heatDamageEnabled": "Heat Damage Enabled",
     "config.advancedcauldron.heatDamageEnabled.tooltip": "Whether entities take damage in heated cauldrons.",

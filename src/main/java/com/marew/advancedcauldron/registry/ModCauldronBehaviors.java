@@ -199,8 +199,6 @@ public class ModCauldronBehaviors {
                 return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
             }
 
-            RegistryEntry<Potion> potion = potionOpt.get();
-
             if (!world.isClient) {
                 BlockState potionState = ModBlocks.POTION_CAULDRON.getDefaultState()
                         .with(PotionCauldronBlock.LEVEL, 1);
@@ -218,6 +216,78 @@ public class ModCauldronBehaviors {
                         player.setStackInHand(hand, bottle);
                     } else if (!player.getInventory().insertStack(bottle)) {
                         player.dropItem(bottle, false);
+                    }
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
+            }
+            return ItemActionResult.success(world.isClient);
+        });
+
+        emptyMap.put(Items.SPLASH_POTION, (state, world, pos, player, hand, stack) -> {
+            PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
+            if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+
+            Optional<RegistryEntry<Potion>> potionOpt = contents.potion();
+            if (potionOpt.isEmpty() || potionOpt.get() == Potions.WATER) {
+                return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            }
+
+            if (!world.isClient) {
+                BlockState potionState = ModBlocks.POTION_CAULDRON.getDefaultState()
+                        .with(PotionCauldronBlock.LEVEL, 1);
+                world.setBlockState(pos, potionState);
+
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof PotionCauldronBlockEntity potionBE) {
+                    potionBE.setPotionContents(contents);
+                }
+
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                    ItemStack emptyBottle = new ItemStack(ModItems.EMPTY_SPLASH_BOTTLE);
+                    if (stack.isEmpty()) {
+                        player.setStackInHand(hand, emptyBottle);
+                    } else if (!player.getInventory().insertStack(emptyBottle)) {
+                        player.dropItem(emptyBottle, false);
+                    }
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
+            }
+            return ItemActionResult.success(world.isClient);
+        });
+
+        emptyMap.put(Items.LINGERING_POTION, (state, world, pos, player, hand, stack) -> {
+            PotionContentsComponent contents = stack.get(DataComponentTypes.POTION_CONTENTS);
+            if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+
+            Optional<RegistryEntry<Potion>> potionOpt = contents.potion();
+            if (potionOpt.isEmpty() || potionOpt.get() == Potions.WATER) {
+                return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            }
+
+            if (!world.isClient) {
+                BlockState potionState = ModBlocks.POTION_CAULDRON.getDefaultState()
+                        .with(PotionCauldronBlock.LEVEL, 1);
+                world.setBlockState(pos, potionState);
+
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof PotionCauldronBlockEntity potionBE) {
+                    potionBE.setPotionContents(contents);
+                }
+
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                    ItemStack emptyBottle = new ItemStack(ModItems.EMPTY_LINGERING_BOTTLE);
+                    if (stack.isEmpty()) {
+                        player.setStackInHand(hand, emptyBottle);
+                    } else if (!player.getInventory().insertStack(emptyBottle)) {
+                        player.dropItem(emptyBottle, false);
                     }
                 }
 
@@ -671,7 +741,7 @@ public class ModCauldronBehaviors {
     private static void registerBrewingCauldronBehaviors() {
         Map<Item, CauldronBehavior> brewMap = ModBlocks.BREWING_CAULDRON_BEHAVIOR.map();
 
-        // Glass bottle -> extract current potion (no bonus, can be poured back in)
+        // Glass bottle -> extract current potion (25% extended, same as splash/lingering)
         brewMap.put(Items.GLASS_BOTTLE, (state, world, pos, player, hand, stack) -> {
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
@@ -681,8 +751,7 @@ public class ModCauldronBehaviors {
                     PotionContentsComponent contents = brewBE.getCurrentPotion();
                     if (contents == null) return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-                    ItemStack potionStack = new ItemStack(Items.POTION);
-                    potionStack.set(DataComponentTypes.POTION_CONTENTS, contents);
+                    ItemStack potionStack = createExtendedPotion(contents, Items.POTION);
 
                     if (!player.getAbilities().creativeMode) {
                         stack.decrement(1);

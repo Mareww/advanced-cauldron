@@ -3,7 +3,7 @@
     "minVersion": "0.8",
     "package": "com.marew.advancedcauldron.mixin",
     "compatibilityLevel": "JAVA_21",
-    "mixins": ["ArrowEntityMixin", "CauldronSnowMixin", "WaterCauldronBrewingMixin", "WaterCauldronFreezingMixin", "WaterCauldronItemCollisionMixin"],
+    "mixins": ["ArrowEntityMixin", "CauldronSnowMixin", "PersistentProjectileEntityMixin", "WaterCauldronBrewingMixin", "WaterCauldronFreezingMixin", "WaterCauldronItemCollisionMixin"],
     "client": ["client.CauldronBubblesMixin", "client.CampfireSmokeMixin", "client.TippedArrowItemMixin"],
     "injectors": {
         "defaultRequire": 1

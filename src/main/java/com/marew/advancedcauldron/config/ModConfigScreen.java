@@ -34,11 +34,20 @@ public class ModConfigScreen {
                 .setSaveConsumer(val -> config.itemPickupDelayTicks = val)
                 .build());
 
-        brewing.addEntry(entry.startIntField(Text.translatable("config.advancedcauldron.arrowsPerCauldronLevel"), config.arrowsPerCauldronLevel)
+        // Arrows category
+        ConfigCategory arrows = builder.getOrCreateCategory(Text.translatable("config.advancedcauldron.category.arrows"));
+
+        arrows.addEntry(entry.startIntField(Text.translatable("config.advancedcauldron.arrowsPerCauldronLevel"), config.arrowsPerCauldronLevel)
                 .setDefaultValue(defaults.arrowsPerCauldronLevel)
                 .setMin(1)
                 .setTooltip(Text.translatable("config.advancedcauldron.arrowsPerCauldronLevel.tooltip"))
                 .setSaveConsumer(val -> config.arrowsPerCauldronLevel = val)
+                .build());
+
+        arrows.addEntry(entry.startBooleanToggle(Text.translatable("config.advancedcauldron.cauldronArrowPickupRestoresEffect"), config.cauldronArrowPickupRestoresEffect)
+                .setDefaultValue(defaults.cauldronArrowPickupRestoresEffect)
+                .setTooltip(Text.translatable("config.advancedcauldron.cauldronArrowPickupRestoresEffect.tooltip"))
+                .setSaveConsumer(val -> config.cauldronArrowPickupRestoresEffect = val)
                 .build());
 
         // Heat damage category

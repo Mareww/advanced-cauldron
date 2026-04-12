@@ -22,6 +22,7 @@ public class ModConfig {
     public int heatDamageDelayTicks = 40;
     public int heatDamageIntervalTicks = 20;
     public int arrowsPerCauldronLevel = 16;
+    public boolean cauldronArrowPickupRestoresEffect = true;
     public boolean steamParticlesEnabled = true;
     public boolean brewingBubbleParticlesEnabled = true;
     public boolean suppressCampfireSmoke = true;
