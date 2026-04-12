@@ -703,6 +703,7 @@ public class ModCauldronBehaviors {
             // Create tipped arrows: store pre-scaled D/4 effects in CustomPotionEffects so that
             // picked-up arrows have identical NBT (enabling stacking) and hit with correct duration.
             ItemStack tippedArrows = new ItemStack(tippedItem, toTip);
+            tippedArrows.getOrCreateNbt().putString("OriginalArrow", Registries.ITEM.getId(item).toString());
             PotionUtil.setPotion(tippedArrows, storedPotion);
             List<StatusEffectInstance> scaledEffects = new ArrayList<>();
             for (StatusEffectInstance effect : storedPotion.getEffects()) {

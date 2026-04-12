@@ -33,8 +33,14 @@ public class PersistentProjectileEntityMixin {
         }
 
         if (!ModConfig.get().cauldronArrowPickupRestoresEffect) {
-            // Config disabled: return a plain arrow with no potion effects
-            return new ItemStack(Items.ARROW, stack.getCount());
+            // Config disabled: return the original plain arrow (no potion effects)
+            Item plainArrow = Items.ARROW;
+            Identifier originalId = tipped.advancedcauldron$getOriginalArrowId();
+            if (originalId != null) {
+                Item found = Registries.ITEM.get(originalId);
+                if (found != Items.AIR) plainArrow = found;
+            }
+            return new ItemStack(plainArrow, stack.getCount());
         }
 
         List<StatusEffectInstance> effects = tipped.advancedcauldron$getCauldronEffects();

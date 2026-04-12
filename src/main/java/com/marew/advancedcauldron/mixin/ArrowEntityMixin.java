@@ -26,6 +26,7 @@ public class ArrowEntityMixin implements ICauldronTipped {
 
     @Unique private boolean advancedcauldron$cauldronTipped = false;
     @Unique private Identifier advancedcauldron$tippedItemId = null;
+    @Unique private Identifier advancedcauldron$originalArrowId = null;
     @Unique private Identifier advancedcauldron$potionId = null;
     @Unique private List<StatusEffectInstance> advancedcauldron$cauldronEffects = List.of();
 
@@ -37,6 +38,11 @@ public class ArrowEntityMixin implements ICauldronTipped {
     @Override
     public Identifier advancedcauldron$getTippedItemId() {
         return this.advancedcauldron$tippedItemId;
+    }
+
+    @Override
+    public Identifier advancedcauldron$getOriginalArrowId() {
+        return this.advancedcauldron$originalArrowId;
     }
 
     @Override
@@ -56,6 +62,10 @@ public class ArrowEntityMixin implements ICauldronTipped {
         if (!customEffects.isEmpty()) {
             this.advancedcauldron$cauldronTipped = true;
             this.advancedcauldron$tippedItemId = Registries.ITEM.getId(stack.getItem());
+            NbtCompound stackNbt = stack.getNbt();
+            if (stackNbt != null && stackNbt.contains("OriginalArrow")) {
+                this.advancedcauldron$originalArrowId = Identifier.tryParse(stackNbt.getString("OriginalArrow"));
+            }
             Potion potion = PotionUtil.getPotion(stack);
             if (potion != Potions.EMPTY) {
                 this.advancedcauldron$potionId = Registries.POTION.getId(potion);
@@ -70,6 +80,9 @@ public class ArrowEntityMixin implements ICauldronTipped {
         nbt.putBoolean("AdvancedCauldronTipped", true);
         if (this.advancedcauldron$tippedItemId != null) {
             nbt.putString("AdvancedCauldronTippedItem", this.advancedcauldron$tippedItemId.toString());
+        }
+        if (this.advancedcauldron$originalArrowId != null) {
+            nbt.putString("AdvancedCauldronOriginalArrow", this.advancedcauldron$originalArrowId.toString());
         }
         if (this.advancedcauldron$potionId != null) {
             nbt.putString("AdvancedCauldronPotion", this.advancedcauldron$potionId.toString());
@@ -90,6 +103,9 @@ public class ArrowEntityMixin implements ICauldronTipped {
         if (!this.advancedcauldron$cauldronTipped) return;
         if (nbt.contains("AdvancedCauldronTippedItem")) {
             this.advancedcauldron$tippedItemId = Identifier.tryParse(nbt.getString("AdvancedCauldronTippedItem"));
+        }
+        if (nbt.contains("AdvancedCauldronOriginalArrow")) {
+            this.advancedcauldron$originalArrowId = Identifier.tryParse(nbt.getString("AdvancedCauldronOriginalArrow"));
         }
         if (nbt.contains("AdvancedCauldronPotion")) {
             this.advancedcauldron$potionId = Identifier.tryParse(nbt.getString("AdvancedCauldronPotion"));
