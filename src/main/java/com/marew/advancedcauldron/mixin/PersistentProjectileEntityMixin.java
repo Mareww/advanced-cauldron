@@ -33,9 +33,8 @@ public class PersistentProjectileEntityMixin {
         }
 
         if (!ModConfig.get().cauldronArrowPickupRestoresEffect) {
-            // Config disabled: strip our pre-scaled effects so arrow reverts to vanilla D/8 behavior
-            stack.removeSubNbt("CustomPotionEffects");
-            return stack;
+            // Config disabled: return a plain arrow with no potion effects
+            return new ItemStack(Items.ARROW, stack.getCount());
         }
 
         List<StatusEffectInstance> effects = tipped.advancedcauldron$getCauldronEffects();
