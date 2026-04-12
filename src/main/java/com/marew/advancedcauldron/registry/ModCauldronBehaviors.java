@@ -39,6 +39,8 @@ import net.minecraft.world.World;
 import net.minecraft.text.Text;
 import net.minecraft.world.event.GameEvent;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class ModCauldronBehaviors {
@@ -187,7 +189,7 @@ public class ModCauldronBehaviors {
         });
 
         emptyMap.put(Items.POTION, (state, world, pos, player, hand, stack) -> {
-            Potion potion = PotionUtil.getPotion(stack);
+            Potion potion = getEffectivePotion(stack);
             if (potion == Potions.EMPTY || potion == Potions.WATER) {
                 return ActionResult.PASS;
             }
@@ -209,6 +211,68 @@ public class ModCauldronBehaviors {
                         player.setStackInHand(hand, bottle);
                     } else if (!player.getInventory().insertStack(bottle)) {
                         player.dropItem(bottle, false);
+                    }
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        emptyMap.put(Items.SPLASH_POTION, (state, world, pos, player, hand, stack) -> {
+            Potion potion = getEffectivePotion(stack);
+            if (potion == Potions.EMPTY || potion == Potions.WATER) return ActionResult.PASS;
+
+            if (!world.isClient) {
+                BlockState potionState = ModBlocks.POTION_CAULDRON.getDefaultState()
+                        .with(PotionCauldronBlock.LEVEL, 1);
+                world.setBlockState(pos, potionState);
+
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof PotionCauldronBlockEntity potionBE) {
+                    potionBE.setPotion(potion);
+                }
+
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                    ItemStack emptyBottle = new ItemStack(ModItems.EMPTY_SPLASH_BOTTLE);
+                    if (stack.isEmpty()) {
+                        player.setStackInHand(hand, emptyBottle);
+                    } else if (!player.getInventory().insertStack(emptyBottle)) {
+                        player.dropItem(emptyBottle, false);
+                    }
+                }
+
+                player.incrementStat(Stats.USE_CAULDRON);
+                world.playSound(null, pos, SoundEvents.ITEM_BOTTLE_EMPTY, SoundCategory.BLOCKS, 1.0F, 1.0F);
+                world.emitGameEvent(null, GameEvent.FLUID_PLACE, pos);
+            }
+            return ActionResult.success(world.isClient);
+        });
+
+        emptyMap.put(Items.LINGERING_POTION, (state, world, pos, player, hand, stack) -> {
+            Potion potion = getEffectivePotion(stack);
+            if (potion == Potions.EMPTY || potion == Potions.WATER) return ActionResult.PASS;
+
+            if (!world.isClient) {
+                BlockState potionState = ModBlocks.POTION_CAULDRON.getDefaultState()
+                        .with(PotionCauldronBlock.LEVEL, 1);
+                world.setBlockState(pos, potionState);
+
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof PotionCauldronBlockEntity potionBE) {
+                    potionBE.setPotion(potion);
+                }
+
+                if (!player.getAbilities().creativeMode) {
+                    stack.decrement(1);
+                    ItemStack emptyBottle = new ItemStack(ModItems.EMPTY_LINGERING_BOTTLE);
+                    if (stack.isEmpty()) {
+                        player.setStackInHand(hand, emptyBottle);
+                    } else if (!player.getInventory().insertStack(emptyBottle)) {
+                        player.dropItem(emptyBottle, false);
                     }
                 }
 
@@ -405,7 +469,7 @@ public class ModCauldronBehaviors {
             int level = state.get(PotionCauldronBlock.LEVEL);
             if (level >= 3) return ActionResult.PASS;
 
-            Potion incomingPotion = PotionUtil.getPotion(stack);
+            Potion incomingPotion = getEffectivePotion(stack);
             if (incomingPotion == Potions.EMPTY || incomingPotion == Potions.WATER) return ActionResult.PASS;
 
             if (!world.isClient) {
@@ -438,7 +502,7 @@ public class ModCauldronBehaviors {
             int level = state.get(PotionCauldronBlock.LEVEL);
             if (level >= 3) return ActionResult.PASS;
 
-            Potion incomingPotion = PotionUtil.getPotion(stack);
+            Potion incomingPotion = getEffectivePotion(stack);
             if (incomingPotion == Potions.EMPTY || incomingPotion == Potions.WATER) return ActionResult.PASS;
 
             if (!world.isClient) {
@@ -616,28 +680,43 @@ public class ModCauldronBehaviors {
 
             // Determine the tipped arrow item
             Item tippedItem = Items.TIPPED_ARROW;
-            NbtCompound customNbt = new NbtCompound();
-            customNbt.putBoolean("CauldronTipped", true);
 
             if (item != Items.ARROW) {
                 Identifier arrowId = Registries.ITEM.getId(item);
-                customNbt.putString("OriginalArrow", arrowId.toString());
-
                 String namespace = arrowId.getNamespace();
                 String path = arrowId.getPath();
-                Identifier tippedVariantId = new Identifier(namespace, "tipped_" + path);
-                Item tippedVariant = Registries.ITEM.get(tippedVariantId);
 
-                if (tippedVariant != Items.AIR && tippedVariant != Items.TIPPED_ARROW) {
+                // Try prefix convention first: tipped_steel_arrow
+                Item tippedVariant = Registries.ITEM.get(new Identifier(namespace, "tipped_" + path));
+
+                // Try suffix convention as fallback: steel_tipped_arrow (for paths ending in _arrow)
+                if ((tippedVariant == null || tippedVariant == Items.AIR) && path.endsWith("_arrow")) {
+                    String base = path.substring(0, path.length() - "_arrow".length());
+                    tippedVariant = Registries.ITEM.get(new Identifier(namespace, base + "_tipped_arrow"));
+                }
+
+                if (tippedVariant != null && tippedVariant != Items.AIR && tippedVariant != Items.TIPPED_ARROW) {
                     tippedItem = tippedVariant;
                 }
             }
 
-            // Create the tipped arrows with the potion — ArrowEntityMixin scales duration to ÷4 on hit
+            // Create tipped arrows: store pre-scaled D/4 effects in CustomPotionEffects so that
+            // picked-up arrows have identical NBT (enabling stacking) and hit with correct duration.
             ItemStack tippedArrows = new ItemStack(tippedItem, toTip);
             PotionUtil.setPotion(tippedArrows, storedPotion);
-            NbtCompound nbt = tippedArrows.getOrCreateNbt();
-            nbt.put("CauldronData", customNbt);
+            List<StatusEffectInstance> scaledEffects = new ArrayList<>();
+            for (StatusEffectInstance effect : storedPotion.getEffects()) {
+                scaledEffects.add(new StatusEffectInstance(
+                    effect.getEffectType(),
+                    Math.max(1, effect.mapDuration(d -> d / 4)),
+                    effect.getAmplifier(),
+                    effect.isAmbient(),
+                    effect.shouldShowParticles()
+                ));
+            }
+            if (!scaledEffects.isEmpty()) {
+                PotionUtil.setCustomPotionEffects(tippedArrows, scaledEffects);
+            }
 
             // Consume arrows
             if (!player.getAbilities().creativeMode) {
@@ -674,7 +753,7 @@ public class ModCauldronBehaviors {
     private static void registerBrewingCauldronBehaviors() {
         Map<Item, CauldronBehavior> brewMap = ModBlocks.BREWING_CAULDRON_BEHAVIOR;
 
-        // Glass bottle -> extract current potion (if not actively brewing, no bonus)
+        // Glass bottle -> extract current potion (25% extended, same as splash/lingering)
         brewMap.put(Items.GLASS_BOTTLE, (state, world, pos, player, hand, stack) -> {
             if (!world.isClient) {
                 BlockEntity be = world.getBlockEntity(pos);
@@ -684,8 +763,7 @@ public class ModCauldronBehaviors {
                     Potion potion = brewBE.getCurrentPotion();
                     if (potion == null) return ActionResult.PASS;
 
-                    ItemStack potionStack = new ItemStack(Items.POTION);
-                    PotionUtil.setPotion(potionStack, potion);
+                    ItemStack potionStack = createExtendedPotion(potion, Items.POTION);
 
                     if (!player.getAbilities().creativeMode) {
                         stack.decrement(1);
